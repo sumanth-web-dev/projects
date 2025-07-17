@@ -29,6 +29,7 @@ from services.resume_parser_service import resume_parser_service
 from services.analytics_service import analytics_service
 from services.job_search_service import job_search_service
 from services.campus_drive_service import campus_drive_service
+from services.admin_service import admin_service
 
 
 def create_app(config_name='Config'):
@@ -140,6 +141,9 @@ def create_app(config_name='Config'):
     
     # Initialize campus drive service
     campus_drive_service.init_app(app)
+    
+    # Initialize admin service
+    admin_service.init_app(app)
     
     # Register error handlers
     register_error_handlers(app)

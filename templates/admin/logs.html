@@ -1,0 +1,329 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}System Logs - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a></li>
+<li><a href="{{ url_for('admin.roles') }}"><i class="fas fa-user-tag"></i> Roles</a></li>
+<li><a href="{{ url_for('admin.system_settings') }}"><i class="fas fa-cogs"></i> System Settings</a></li>
+<li><a href="{{ url_for('admin.email_templates') }}"><i class="fas fa-envelope"></i> Email Templates</a></li>
+<li><a href="{{ url_for('admin.logs') }}" class="active"><i class="fas fa-list"></i> Logs</a></li>
+<li><a href="{{ url_for('admin.security_audit') }}"><i class="fas fa-shield-alt"></i> Security Audit</a></li>
+<li><a href="{{ url_for('admin.backup') }}"><i class="fas fa-database"></i> Backup</a></li>
+<li><a href="{{ url_for('admin.analytics') }}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('admin.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+<li><a href="{{ url_for('admin.job_categories') }}"><i class="fas fa-tags"></i> Job Categories</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}System Logs{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{{ url_for('admin.download_logs', type=log_type) }}" class="btn btn-secondary">
+        <i class="fas fa-download"></i> Download
+    </a>
+    <button type="button" class="btn btn-warning" onclick="clearLogs()">
+        <i class="fas fa-trash"></i> Clear Logs
+    </button>
+    <button type="button" class="btn btn-info" onclick="refreshLogs()">
+        <i class="fas fa-sync"></i> Refresh
+    </button>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="logs-container">
+    <div class="logs-filters">
+        <div class="card">
+            <div class="card-header">
+                <h3>Log Filters</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="log_type">Log Type</label>
+                    <select id="log_type" class="form-control" onchange="changeLogType()">
+                        <option value="system" {% if log_type == 'system' %}selected{% endif %}>System Logs</option>
+                        <option value="auth" {% if log_type == 'auth' %}selected{% endif %}>Authentication Logs</option>
+                        <option value="error" {% if log_type == 'error' %}selected{% endif %}>Error Logs</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="log_level">Log Level</label>
+                    <select id="log_level" class="form-control" onchange="filterLogs()">
+                        <option value="">All Levels</option>
+                        <option value="DEBUG">Debug</option>
+                        <option value="INFO">Info</option>
+                        <option value="WARNING">Warning</option>
+                        <option value="ERROR">Error</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="search_term">Search</label>
+                    <input type="text" id="search_term" class="form-control" placeholder="Search logs..." onkeyup="searchLogs()">
+                </div>
+                
+                <div class="form-group">
+                    <label for="limit">Number of Entries</label>
+                    <select id="limit" class="form-control" onchange="changeLimitAndRefresh()">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-block" onclick="applyFilters()">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="logs-content">
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ log_type|title }} Logs</h3>
+                <div class="log-stats">
+                    <span class="badge badge-info">{{ logs|length }} entries</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                    <div class="logs-table-container">
+                        <table class="table table-striped" id="logsTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Level</th>
+                                    <th>Message</th>
+                                    {% if log_type == 'auth' %}
+                                        <th>User</th>
+                                        <th>IP Address</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                    <tr class="log-entry" data-level="{{ log.level|default('') }}" data-message="{{ log.message|default('') }}">
+                                        <td class="timestamp">{{ log.timestamp|default('N/A') }}</td>
+                                        <td>
+                                            {% if log.level %}
+                                                {% if log.level == 'ERROR' or log.level == 'CRITICAL' %}
+                                                    <span class="badge badge-danger">{{ log.level }}</span>
+                                                {% elif log.level == 'WARNING' %}
+                                                    <span class="badge badge-warning">{{ log.level }}</span>
+                                                {% elif log.level == 'INFO' %}
+                                                    <span class="badge badge-info">{{ log.level }}</span>
+                                                {% elif log.level == 'DEBUG' %}
+                                                    <span class="badge badge-secondary">{{ log.level }}</span>
+                                                {% else %}
+                                                    <span class="badge badge-light">{{ log.level }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td class="message">
+                                            <div class="log-message">{{ log.message|default('') }}</div>
+                                            {% if log.details %}
+                                                <div class="log-details">
+                                                    <small class="text-muted">{{ log.details }}</small>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        {% if log_type == 'auth' %}
+                                            <td>{{ log.user|default('N/A') }}</td>
+                                            <td>{{ log.ip_address|default('N/A') }}</td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="no-logs">
+                        <div class="no-logs-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h4>No logs found</h4>
+                        <p>There are no {{ log_type }} logs to display.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .logs-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .logs-filters {
+        width: 300px;
+        flex-shrink: 0;
+    }
+    
+    .logs-content {
+        flex: 1;
+    }
+    
+    .log-stats {
+        display: flex;
+        align-items: center;
+    }
+    
+    .logs-table-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .log-entry {
+        font-size: 0.9rem;
+    }
+    
+    .timestamp {
+        white-space: nowrap;
+        font-family: monospace;
+        font-size: 0.8rem;
+    }
+    
+    .message {
+        max-width: 400px;
+        word-wrap: break-word;
+    }
+    
+    .log-message {
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+    
+    .log-details {
+        margin-top: 0.25rem;
+    }
+    
+    .no-logs {
+        text-align: center;
+        padding: 3rem;
+    }
+    
+    .no-logs-icon {
+        font-size: 3rem;
+        color: var(--gray-color);
+        margin-bottom: 1rem;
+    }
+    
+    .log-entry.hidden {
+        display: none;
+    }
+    
+    @media (max-width: 992px) {
+        .logs-container {
+            flex-direction: column;
+        }
+        
+        .logs-filters {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    function changeLogType() {
+        const logType = document.getElementById('log_type').value;
+        window.location.href = "{{ url_for('admin.logs') }}?type=" + logType;
+    }
+    
+    function changeLimitAndRefresh() {
+        const logType = document.getElementById('log_type').value;
+        const limit = document.getElementById('limit').value;
+        window.location.href = "{{ url_for('admin.logs') }}?type=" + logType + "&limit=" + limit;
+    }
+    
+    function filterLogs() {
+        const level = document.getElementById('log_level').value;
+        const rows = document.querySelectorAll('.log-entry');
+        
+        rows.forEach(row => {
+            if (!level || row.dataset.level === level) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+        
+        updateLogCount();
+    }
+    
+    function searchLogs() {
+        const searchTerm = document.getElementById('search_term').value.toLowerCase();
+        const rows = document.querySelectorAll('.log-entry');
+        
+        rows.forEach(row => {
+            const message = row.dataset.message.toLowerCase();
+            if (!searchTerm || message.includes(searchTerm)) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+        
+        updateLogCount();
+    }
+    
+    function applyFilters() {
+        filterLogs();
+        searchLogs();
+    }
+    
+    function updateLogCount() {
+        const visibleRows = document.querySelectorAll('.log-entry:not(.hidden)');
+        const badge = document.querySelector('.badge-info');
+        if (badge) {
+            badge.textContent = visibleRows.length + ' entries';
+        }
+    }
+    
+    function refreshLogs() {
+        window.location.reload();
+    }
+    
+    function clearLogs() {
+        if (confirm('Are you sure you want to clear all ' + '{{ log_type }}' + ' logs? This action cannot be undone.')) {
+            const logType = document.getElementById('log_type').value;
+            
+            fetch('/admin/api/logs/clear', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ session.csrf_token }}'
+                },
+                body: JSON.stringify({
+                    log_type: logType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Logs cleared successfully');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error clearing logs: ' + error);
+            });
+        }
+    }
+    
+    // Auto-refresh logs every 30 seconds
+    setInterval(function() {
+        if (document.getElementById('auto_refresh') && document.getElementById('auto_refresh').checked) {
+            refreshLogs();
+        }
+    }, 30000);
+</script>
+{% endblock %}

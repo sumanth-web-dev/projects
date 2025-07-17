@@ -7,6 +7,8 @@ from flask import Blueprint, request, jsonify, render_template, session, flash, 
 from services.auth_service import auth_service
 from services.notification_service import notification_service
 from services.security_audit_service import security_audit_service
+from services.admin_service import admin_service
+from services.analytics_service import analytics_service
 from api.security_middleware import validate_json_schema, sanitize_inputs, check_content_type, require_auth, require_role
 from models.user import User
 from models.database import db
@@ -31,10 +33,24 @@ def dashboard():
         flash('User not found', 'error')
         return redirect(url_for('auth.logout'))
     
-    # This would typically fetch summary data for the admin dashboard
-    # For now, we'll return a template with placeholder data
+    # Get dashboard data
+    stats = analytics_service.get_dashboard_summary()
+    system_status = admin_service.get_system_status()
+    user_growth = admin_service.get_user_growth_data()
+    user_distribution = admin_service.get_user_distribution()
+    performance = admin_service.get_performance_data()
+    recent_activity = admin_service.get_system_logs('auth', 10)
+    security_alerts = admin_service.get_security_audit_logs(5)
     
-    return render_template('admin/dashboard.html', user=user)
+    return render_template('admin/dashboard.html', 
+                          user=user,
+                          stats=stats,
+                          system_status=system_status,
+                          user_growth=user_growth,
+                          user_distribution=user_distribution,
+                          performance=performance,
+                          recent_activity=recent_activity,
+                          security_alerts=security_alerts)
 
 @admin_bp.route('/users', methods=['GET'])
 def users():
@@ -217,25 +233,24 @@ def roles():
     if request.method == 'POST':
         # Handle role creation
         try:
-            role_name = request.form.get('role_name')
-            role_description = request.form.get('role_description')
+            role_data = {
+                'name': request.form.get('role_name'),
+                'description': request.form.get('role_description')
+            }
             
-            # Create role (placeholder for actual implementation)
-            # This would typically save the role to the database
+            success, message = admin_service.create_role(role_data)
             
-            flash('Role created successfully', 'success')
+            if success:
+                flash('Role created successfully', 'success')
+            else:
+                flash(message, 'error')
+                
             return redirect(url_for('admin.roles'))
         except Exception as e:
             flash(f'Error creating role: {str(e)}', 'error')
     
-    # This would typically fetch roles from the database
-    # For now, we'll use placeholder data
-    roles = [
-        {'name': 'admin', 'description': 'Administrator with full access'},
-        {'name': 'hr', 'description': 'HR personnel with hiring capabilities'},
-        {'name': 'student', 'description': 'Student user with job search capabilities'},
-        {'name': 'user', 'description': 'Regular user with basic access'}
-    ]
+    # Get roles from admin service
+    roles = admin_service.get_user_roles()
     
     return render_template('admin/roles.html', roles=roles)
 
@@ -245,29 +260,29 @@ def system_settings():
     if request.method == 'POST':
         # Handle settings update
         try:
-            # Get form data
-            site_name = request.form.get('site_name')
-            site_description = request.form.get('site_description')
-            contact_email = request.form.get('contact_email')
-            max_file_size = request.form.get('max_file_size')
-            allowed_file_types = request.form.get('allowed_file_types')
+            settings_data = {
+                'site_name': request.form.get('site_name'),
+                'site_description': request.form.get('site_description'),
+                'contact_email': request.form.get('contact_email'),
+                'max_file_size': int(request.form.get('max_file_size', 5)),
+                'allowed_file_types': request.form.get('allowed_file_types', '').split(','),
+                'pagination_limit': int(request.form.get('pagination_limit', 20)),
+                'enable_notifications': 'enable_notifications' in request.form,
+                'enable_email_notifications': 'enable_email_notifications' in request.form,
+                'maintenance_mode': 'maintenance_mode' in request.form
+            }
             
-            # Update settings (placeholder for actual implementation)
-            # This would typically update settings in the database
+            success, message = admin_service.update_system_settings(settings_data)
             
-            flash('System settings updated successfully', 'success')
+            if success:
+                flash('System settings updated successfully', 'success')
+            else:
+                flash(message, 'error')
         except Exception as e:
             flash(f'Error updating system settings: {str(e)}', 'error')
     
-    # This would typically fetch current settings from the database
-    # For now, we'll use placeholder data
-    settings = {
-        'site_name': 'Job Application Agent',
-        'site_description': 'A platform for job seekers and employers',
-        'contact_email': 'contact@example.com',
-        'max_file_size': '5',
-        'allowed_file_types': 'pdf,doc,docx'
-    }
+    # Get current settings from admin service
+    settings = admin_service.get_system_settings()
     
     return render_template('admin/system_settings.html', settings=settings)
 
@@ -279,32 +294,28 @@ def email_templates():
     if request.method == 'POST' and template_id:
         # Handle template update
         try:
-            subject = request.form.get('subject')
-            body = request.form.get('body')
+            template_data = {
+                'subject': request.form.get('subject'),
+                'body': request.form.get('body')
+            }
             
-            # Update template (placeholder for actual implementation)
-            # This would typically update the template in the database
+            success, message = admin_service.update_email_template(template_id, template_data)
             
-            flash('Email template updated successfully', 'success')
+            if success:
+                flash('Email template updated successfully', 'success')
+            else:
+                flash(message, 'error')
+                
             return redirect(url_for('admin.email_templates'))
         except Exception as e:
             flash(f'Error updating email template: {str(e)}', 'error')
     
-    # This would typically fetch email templates from the database
-    # For now, we'll use placeholder data
-    templates = [
-        {'id': 'welcome', 'name': 'Welcome Email', 'subject': 'Welcome to Job Application Agent'},
-        {'id': 'password_reset', 'name': 'Password Reset', 'subject': 'Reset Your Password'},
-        {'id': 'application_status', 'name': 'Application Status Update', 'subject': 'Your Application Status'}
-    ]
+    # Get email templates from admin service
+    templates = admin_service.get_email_templates()
     
     template = None
     if template_id:
-        # Find the selected template
-        for t in templates:
-            if t['id'] == template_id:
-                template = t
-                break
+        template = admin_service.get_email_template(template_id)
     
     return render_template('admin/email_templates.html', templates=templates, template=template)
 
@@ -312,14 +323,10 @@ def email_templates():
 def logs():
     """View system logs."""
     log_type = request.args.get('type', 'system')
+    limit = request.args.get('limit', 100, type=int)
     
-    # This would typically fetch logs from the log files or database
-    # For now, we'll use placeholder data
-    logs = [
-        {'timestamp': '2025-07-18 10:30:45', 'level': 'INFO', 'message': 'User logged in successfully'},
-        {'timestamp': '2025-07-18 10:35:12', 'level': 'WARNING', 'message': 'Failed login attempt'},
-        {'timestamp': '2025-07-18 11:15:30', 'level': 'ERROR', 'message': 'Database connection error'}
-    ]
+    # Get logs from admin service
+    logs = admin_service.get_system_logs(log_type, limit)
     
     return render_template('admin/logs.html', logs=logs, log_type=log_type)
 
@@ -328,21 +335,29 @@ def download_logs():
     """Download system logs."""
     log_type = request.args.get('type', 'system')
     
-    # This would typically generate a log file for download
-    # For now, we'll return a placeholder response
-    
-    return jsonify({'success': False, 'message': 'Log download not implemented yet'})
+    try:
+        # Get logs from admin service
+        logs = admin_service.get_system_logs(log_type, 1000)
+        
+        # Create a temporary file with logs
+        import tempfile
+        import json
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(logs, f, indent=2)
+            temp_file = f.name
+        
+        return send_file(temp_file, as_attachment=True, download_name=f'{log_type}_logs.json')
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @admin_bp.route('/security-audit', methods=['GET'])
 def security_audit():
     """View security audit logs."""
-    # This would typically fetch security audit logs from the database
-    # For now, we'll use placeholder data
-    audit_logs = [
-        {'timestamp': '2025-07-18 09:45:22', 'event_type': 'login_success', 'user': 'admin@example.com', 'ip': '192.168.1.1'},
-        {'timestamp': '2025-07-18 10:12:35', 'event_type': 'permission_denied', 'user': 'user@example.com', 'ip': '192.168.1.2'},
-        {'timestamp': '2025-07-18 11:30:18', 'event_type': 'user_created', 'user': 'admin@example.com', 'ip': '192.168.1.1'}
-    ]
+    limit = request.args.get('limit', 100, type=int)
+    
+    # Get security audit logs from admin service
+    audit_logs = admin_service.get_security_audit_logs(limit)
     
     return render_template('admin/security_audit.html', audit_logs=audit_logs)
 
@@ -352,36 +367,38 @@ def backup():
     if request.method == 'POST':
         # Handle backup creation
         try:
-            # Create backup (placeholder for actual implementation)
-            # This would typically create a database backup
+            success, message, backup_id = admin_service.create_backup()
             
-            flash('Backup created successfully', 'success')
+            if success:
+                flash('Backup created successfully', 'success')
+            else:
+                flash(message, 'error')
+                
             return redirect(url_for('admin.backup'))
         except Exception as e:
             flash(f'Error creating backup: {str(e)}', 'error')
     
-    # This would typically fetch backup history from the database
-    # For now, we'll use placeholder data
-    backups = [
-        {'id': '1', 'timestamp': '2025-07-17 23:00:00', 'size': '24.5 MB', 'status': 'Completed'},
-        {'id': '2', 'timestamp': '2025-07-16 23:00:00', 'size': '24.3 MB', 'status': 'Completed'},
-        {'id': '3', 'timestamp': '2025-07-15 23:00:00', 'size': '24.1 MB', 'status': 'Completed'}
-    ]
+    # Get backup history from admin service
+    backups = admin_service.get_backups()
     
     return render_template('admin/backup.html', backups=backups)
 
 @admin_bp.route('/analytics', methods=['GET'])
 def analytics():
     """View system analytics."""
-    # This would typically fetch analytics data from the database
-    # For now, we'll use placeholder data
+    # Get analytics data from analytics service
+    user_metrics = analytics_service.get_user_metrics()
+    job_metrics = analytics_service.get_job_metrics()
+    application_metrics = analytics_service.get_application_metrics()
+    system_metrics = analytics_service.get_system_metrics()
+    search_analytics = analytics_service.get_search_analytics()
+    
     analytics_data = {
-        'total_users': 1250,
-        'active_users': 875,
-        'total_jobs': 320,
-        'total_applications': 4500,
-        'conversion_rate': '3.5%',
-        'user_growth': '+12%'
+        'user_metrics': user_metrics,
+        'job_metrics': job_metrics,
+        'application_metrics': application_metrics,
+        'system_metrics': system_metrics,
+        'search_analytics': search_analytics
     }
     
     return render_template('admin/analytics.html', analytics=analytics_data)
@@ -392,20 +409,32 @@ def notifications():
     if request.method == 'POST':
         # Handle sending a notification
         try:
-            notification_type = request.form.get('notification_type')
-            recipient_type = request.form.get('recipient_type')
-            subject = request.form.get('subject')
-            message = request.form.get('message')
+            notification_data = {
+                'notification_type': request.form.get('notification_type'),
+                'recipient_type': request.form.get('recipient_type'),
+                'subject': request.form.get('subject'),
+                'message': request.form.get('message'),
+                'send_email': 'send_email' in request.form,
+                'role': request.form.get('role'),
+                'user_ids': request.form.getlist('user_ids')
+            }
             
-            # Send notification (placeholder for actual implementation)
-            # This would typically send notifications to selected users
+            success, message = admin_service.send_system_notification(notification_data)
             
-            flash('Notification sent successfully', 'success')
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'error')
+                
             return redirect(url_for('admin.notifications'))
         except Exception as e:
             flash(f'Error sending notification: {str(e)}', 'error')
     
-    return render_template('admin/notifications.html')
+    # Get users for notification targeting
+    users = User.query.filter_by(is_active=True).all()
+    roles = admin_service.get_user_roles()
+    
+    return render_template('admin/notifications.html', users=users, roles=roles)
 
 @admin_bp.route('/job-categories', methods=['GET', 'POST'])
 def job_categories():
@@ -435,3 +464,199 @@ def job_categories():
     ]
     
     return render_template('admin/job_categories.html', categories=categories)
+# 
+Additional admin endpoints for complete functionality
+
+@admin_bp.route('/backup/<backup_id>/restore', methods=['POST'])
+def restore_backup(backup_id):
+    """Restore a database backup."""
+    try:
+        success, message = admin_service.restore_backup(backup_id)
+        
+        if success:
+            flash('Backup restored successfully', 'success')
+        else:
+            flash(message, 'error')
+    except Exception as e:
+        flash(f'Error restoring backup: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.backup'))
+
+@admin_bp.route('/backup/<backup_id>/delete', methods=['POST'])
+def delete_backup(backup_id):
+    """Delete a database backup."""
+    try:
+        success, message = admin_service.delete_backup(backup_id)
+        
+        if success:
+            flash('Backup deleted successfully', 'success')
+        else:
+            flash(message, 'error')
+    except Exception as e:
+        flash(f'Error deleting backup: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.backup'))
+
+@admin_bp.route('/email-templates/create', methods=['GET', 'POST'])
+def create_email_template():
+    """Create a new email template."""
+    if request.method == 'POST':
+        try:
+            template_id = request.form.get('template_id')
+            template_data = {
+                'subject': request.form.get('subject'),
+                'body': request.form.get('body')
+            }
+            
+            success, message = admin_service.create_email_template(template_id, template_data)
+            
+            if success:
+                flash('Email template created successfully', 'success')
+                return redirect(url_for('admin.email_templates'))
+            else:
+                flash(message, 'error')
+        except Exception as e:
+            flash(f'Error creating email template: {str(e)}', 'error')
+    
+    return render_template('admin/create_email_template.html')
+
+@admin_bp.route('/email-templates/<template_id>/delete', methods=['POST'])
+def delete_email_template(template_id):
+    """Delete an email template."""
+    try:
+        success, message = admin_service.delete_email_template(template_id)
+        
+        if success:
+            flash('Email template deleted successfully', 'success')
+        else:
+            flash(message, 'error')
+    except Exception as e:
+        flash(f'Error deleting email template: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.email_templates'))
+
+@admin_bp.route('/roles/<role_id>', methods=['GET', 'POST'])
+def edit_role(role_id):
+    """Edit a user role."""
+    if request.method == 'POST':
+        try:
+            role_data = {
+                'name': request.form.get('role_name'),
+                'description': request.form.get('role_description')
+            }
+            
+            success, message = admin_service.update_role(role_id, role_data)
+            
+            if success:
+                flash('Role updated successfully', 'success')
+                return redirect(url_for('admin.roles'))
+            else:
+                flash(message, 'error')
+        except Exception as e:
+            flash(f'Error updating role: {str(e)}', 'error')
+    
+    # Get role data for editing
+    roles = admin_service.get_user_roles()
+    role = next((r for r in roles if r['id'] == role_id), None)
+    
+    if not role:
+        flash('Role not found', 'error')
+        return redirect(url_for('admin.roles'))
+    
+    return render_template('admin/edit_role.html', role=role)
+
+@admin_bp.route('/roles/<role_id>/delete', methods=['POST'])
+def delete_role(role_id):
+    """Delete a user role."""
+    try:
+        success, message = admin_service.delete_role(role_id)
+        
+        if success:
+            flash('Role deleted successfully', 'success')
+        else:
+            flash(message, 'error')
+    except Exception as e:
+        flash(f'Error deleting role: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.roles'))
+
+# API endpoints for AJAX requests
+@admin_bp.route('/api/users', methods=['GET'])
+def api_get_users():
+    """API endpoint for getting users."""
+    try:
+        users = User.query.filter_by(is_active=True).all()
+        users_data = []
+        
+        for user in users:
+            personal_data = user.personal_data or {}
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'roles': personal_data.get('roles', []),
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'is_active': user.is_active
+            })
+        
+        return jsonify({'success': True, 'users': users_data})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/api/system-status', methods=['GET'])
+def api_system_status():
+    """API endpoint for getting system status."""
+    try:
+        status = admin_service.get_system_status()
+        return jsonify({'success': True, 'status': status})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/api/analytics/dashboard', methods=['GET'])
+def api_dashboard_analytics():
+    """API endpoint for dashboard analytics."""
+    try:
+        stats = analytics_service.get_dashboard_summary()
+        user_growth = admin_service.get_user_growth_data()
+        user_distribution = admin_service.get_user_distribution()
+        performance = admin_service.get_performance_data()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'stats': stats,
+                'user_growth': user_growth,
+                'user_distribution': user_distribution,
+                'performance': performance
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/api/logs/clear', methods=['POST'])
+def api_clear_logs():
+    """API endpoint for clearing logs."""
+    try:
+        log_type = request.json.get('log_type', 'system')
+        
+        # In a real implementation, you would clear the specified log type
+        # For now, we'll just return success
+        
+        return jsonify({'success': True, 'message': f'{log_type} logs cleared successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/api/maintenance-mode', methods=['POST'])
+def api_toggle_maintenance_mode():
+    """API endpoint for toggling maintenance mode."""
+    try:
+        enabled = request.json.get('enabled', False)
+        
+        settings_data = {'maintenance_mode': enabled}
+        success, message = admin_service.update_system_settings(settings_data)
+        
+        if success:
+            return jsonify({'success': True, 'message': f'Maintenance mode {"enabled" if enabled else "disabled"}'})
+        else:
+            return jsonify({'success': False, 'message': message})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})

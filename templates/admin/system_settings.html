@@ -1,0 +1,143 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}System Settings - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a></li>
+<li><a href="{{ url_for('admin.roles') }}"><i class="fas fa-user-tag"></i> Roles</a></li>
+<li><a href="{{ url_for('admin.system_settings') }}" class="active"><i class="fas fa-cogs"></i> System Settings</a></li>
+<li><a href="{{ url_for('admin.email_templates') }}"><i class="fas fa-envelope"></i> Email Templates</a></li>
+<li><a href="{{ url_for('admin.logs') }}"><i class="fas fa-list"></i> Logs</a></li>
+<li><a href="{{ url_for('admin.security_audit') }}"><i class="fas fa-shield-alt"></i> Security Audit</a></li>
+<li><a href="{{ url_for('admin.backup') }}"><i class="fas fa-database"></i> Backup</a></li>
+<li><a href="{{ url_for('admin.analytics') }}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('admin.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+<li><a href="{{ url_for('admin.job_categories') }}"><i class="fas fa-tags"></i> Job Categories</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}System Settings{% endblock %}
+
+{% block dashboard_content %}
+<div class="settings-container">
+    <form method="POST" action="{{ url_for('admin.system_settings') }}">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>General Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="site_name">Site Name</label>
+                            <input type="text" id="site_name" name="site_name" class="form-control" 
+                                   value="{{ settings.site_name }}" required>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="contact_email">Contact Email</label>
+                            <input type="email" id="contact_email" name="contact_email" class="form-control" 
+                                   value="{{ settings.contact_email }}" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="site_description">Site Description</label>
+                    <textarea id="site_description" name="site_description" class="form-control" rows="3">{{ settings.site_description }}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>File Upload Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="max_file_size">Maximum File Size (MB)</label>
+                            <input type="number" id="max_file_size" name="max_file_size" class="form-control" 
+                                   value="{{ settings.max_file_size }}" min="1" max="100" required>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="allowed_file_types">Allowed File Types (comma-separated)</label>
+                            <input type="text" id="allowed_file_types" name="allowed_file_types" class="form-control" 
+                                   value="{{ settings.allowed_file_types|join(',') if settings.allowed_file_types is iterable and settings.allowed_file_types is not string else settings.allowed_file_types }}" 
+                                   placeholder="pdf,doc,docx">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Application Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="pagination_limit">Items Per Page</label>
+                            <input type="number" id="pagination_limit" name="pagination_limit" class="form-control" 
+                                   value="{{ settings.pagination_limit }}" min="5" max="100" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="enable_notifications" name="enable_notifications" class="form-check-input" 
+                           {% if settings.enable_notifications %}checked{% endif %}>
+                    <label for="enable_notifications" class="form-check-label">Enable In-App Notifications</label>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="enable_email_notifications" name="enable_email_notifications" class="form-check-input" 
+                           {% if settings.enable_email_notifications %}checked{% endif %}>
+                    <label for="enable_email_notifications" class="form-check-label">Enable Email Notifications</label>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" id="maintenance_mode" name="maintenance_mode" class="form-check-input" 
+                           {% if settings.maintenance_mode %}checked{% endif %}>
+                    <label for="maintenance_mode" class="form-check-label">Maintenance Mode</label>
+                    <small class="form-text text-muted">When enabled, only administrators can access the system</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+            <button type="button" class="btn btn-secondary" onclick="location.reload()">Reset</button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .settings-container {
+        max-width: 800px;
+    }
+    
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .form-check {
+        margin-bottom: 1rem;
+    }
+    
+    .form-check .form-text {
+        margin-left: 1.5rem;
+    }
+</style>
+{% endblock %}

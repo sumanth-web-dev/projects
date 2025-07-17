@@ -1,0 +1,333 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Database Backup - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a></li>
+<li><a href="{{ url_for('admin.roles') }}"><i class="fas fa-user-tag"></i> Roles</a></li>
+<li><a href="{{ url_for('admin.system_settings') }}"><i class="fas fa-cogs"></i> System Settings</a></li>
+<li><a href="{{ url_for('admin.email_templates') }}"><i class="fas fa-envelope"></i> Email Templates</a></li>
+<li><a href="{{ url_for('admin.logs') }}"><i class="fas fa-list"></i> Logs</a></li>
+<li><a href="{{ url_for('admin.security_audit') }}"><i class="fas fa-shield-alt"></i> Security Audit</a></li>
+<li><a href="{{ url_for('admin.backup') }}" class="active"><i class="fas fa-database"></i> Backup</a></li>
+<li><a href="{{ url_for('admin.analytics') }}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('admin.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+<li><a href="{{ url_for('admin.job_categories') }}"><i class="fas fa-tags"></i> Job Categories</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Database Backup{% endblock %}
+
+{% block page_actions %}
+<form method="POST" action="{{ url_for('admin.backup') }}" style="display: inline;">
+    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+    <button type="submit" class="btn btn-primary" onclick="return confirm('Create a new database backup?')">
+        <i class="fas fa-plus"></i> Create Backup
+    </button>
+</form>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="backup-container">
+    <div class="backup-info">
+        <div class="card">
+            <div class="card-header">
+                <h3>Backup Information</h3>
+            </div>
+            <div class="card-body">
+                <div class="backup-stats">
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">{{ backups|length }}</div>
+                            <div class="stat-label">Total Backups</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">
+                                {% if backups %}
+                                    {{ backups[0].timestamp|date }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">Last Backup</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-hdd"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value">
+                                {% set total_size = 0 %}
+                                {% for backup in backups %}
+                                    {% set total_size = total_size + 1 %}
+                                {% endfor %}
+                                {{ total_size }} MB
+                            </div>
+                            <div class="stat-label">Total Size</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="backup-schedule">
+                    <h4>Backup Schedule</h4>
+                    <p>Automatic backups are scheduled to run daily at 11:00 PM.</p>
+                    <div class="schedule-status">
+                        <span class="status-indicator active"></span>
+                        <span>Automatic backups are enabled</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="backup-list">
+        <div class="card">
+            <div class="card-header">
+                <h3>Backup History</h3>
+            </div>
+            <div class="card-body">
+                {% if backups %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Backup ID</th>
+                                    <th>Date & Time</th>
+                                    <th>Size</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                    <tr>
+                                        <td>
+                                            <code>{{ backup.id }}</code>
+                                        </td>
+                                        <td>{{ backup.timestamp|datetime }}</td>
+                                        <td>{{ backup.size }}</td>
+                                        <td>
+                                            {% if backup.status == 'completed' %}
+                                                <span class="badge badge-success">Completed</span>
+                                            {% elif backup.status == 'in_progress' %}
+                                                <span class="badge badge-warning">In Progress</span>
+                                            {% elif backup.status == 'failed' %}
+                                                <span class="badge badge-danger">Failed</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ backup.status|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                {% if backup.status == 'completed' %}
+                                                    <form action="{{ url_for('admin.restore_backup', backup_id=backup.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to restore this backup? This will overwrite the current database.')">
+                                                        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                                                        <button type="submit" class="btn btn-sm btn-warning">
+                                                            <i class="fas fa-undo"></i> Restore
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                
+                                                <form action="{{ url_for('admin.delete_backup', backup_id=backup.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this backup?')">
+                                                    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="no-backups">
+                        <div class="no-backups-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h4>No backups found</h4>
+                        <p>Create your first backup to get started.</p>
+                        <form method="POST" action="{{ url_for('admin.backup') }}">
+                            <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                            <button type="submit" class="btn btn-primary">Create First Backup</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="backup-tips">
+    <div class="card">
+        <div class="card-header">
+            <h3>Backup Best Practices</h3>
+        </div>
+        <div class="card-body">
+            <ul class="tips-list">
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Create regular backups to prevent data loss</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Test backup restoration periodically to ensure data integrity</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Keep multiple backup copies for redundancy</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Store backups in a secure, separate location</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Monitor backup status and resolve any issues promptly</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .backup-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .backup-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.25rem;
+    }
+    
+    .stat-info {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .backup-schedule {
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .backup-schedule h4 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .schedule-status {
+        display: flex;
+        align-items: center;
+        margin-top: 1rem;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    
+    .status-indicator.active {
+        background-color: var(--success-color);
+    }
+    
+    .status-indicator.inactive {
+        background-color: var(--danger-color);
+    }
+    
+    .no-backups {
+        text-align: center;
+        padding: 3rem;
+    }
+    
+    .no-backups-icon {
+        font-size: 3rem;
+        color: var(--gray-color);
+        margin-bottom: 1rem;
+    }
+    
+    .backup-tips {
+        margin-top: 2rem;
+    }
+    
+    .tips-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .tips-list li {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .tips-list li:last-child {
+        margin-bottom: 0;
+    }
+    
+    .tips-list li i {
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    @media (max-width: 992px) {
+        .backup-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .backup-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

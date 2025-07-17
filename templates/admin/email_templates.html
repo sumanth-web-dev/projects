@@ -1,0 +1,272 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Email Templates - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a></li>
+<li><a href="{{ url_for('admin.roles') }}"><i class="fas fa-user-tag"></i> Roles</a></li>
+<li><a href="{{ url_for('admin.system_settings') }}"><i class="fas fa-cogs"></i> System Settings</a></li>
+<li><a href="{{ url_for('admin.email_templates') }}" class="active"><i class="fas fa-envelope"></i> Email Templates</a></li>
+<li><a href="{{ url_for('admin.logs') }}"><i class="fas fa-list"></i> Logs</a></li>
+<li><a href="{{ url_for('admin.security_audit') }}"><i class="fas fa-shield-alt"></i> Security Audit</a></li>
+<li><a href="{{ url_for('admin.backup') }}"><i class="fas fa-database"></i> Backup</a></li>
+<li><a href="{{ url_for('admin.analytics') }}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('admin.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+<li><a href="{{ url_for('admin.job_categories') }}"><i class="fas fa-tags"></i> Job Categories</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Email Templates{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('admin.create_email_template') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Create Template</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="email-templates-container">
+    <div class="templates-list">
+        <div class="card">
+            <div class="card-header">
+                <h3>Available Templates</h3>
+            </div>
+            <div class="card-body">
+                {% if templates %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Template ID</th>
+                                    <th>Subject</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tmpl in templates %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ tmpl.id }}</strong>
+                                        </td>
+                                        <td>{{ tmpl.subject }}</td>
+                                        <td>
+                                            <a href="{{ url_for('admin.email_templates', id=tmpl.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                            <form action="{{ url_for('admin.delete_email_template', template_id=tmpl.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this template?')">
+                                                <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No email templates found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% if template %}
+        <div class="template-editor">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Edit Template: {{ template.id }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.email_templates', id=template.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" name="subject" class="form-control" 
+                                   value="{{ template.subject }}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="body">Email Body</label>
+                            <textarea id="body" name="body" class="form-control" rows="15" required>{{ template.body }}</textarea>
+                        </div>
+                        
+                        <div class="template-variables">
+                            <h4>Available Variables</h4>
+                            <p>You can use the following variables in your templates:</p>
+                            <div class="variables-list">
+                                <span class="variable">{{user_name}}</span>
+                                <span class="variable">{{user_email}}</span>
+                                <span class="variable">{{job_title}}</span>
+                                <span class="variable">{{company}}</span>
+                                <span class="variable">{{application_status}}</span>
+                                <span class="variable">{{interview_date}}</span>
+                                <span class="variable">{{interview_time}}</span>
+                                <span class="variable">{{reset_code}}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Template</button>
+                            <a href="{{ url_for('admin.email_templates') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="button" class="btn btn-info" onclick="previewTemplate()">Preview</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Email Preview</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="email-preview">
+                    <div class="email-subject">
+                        <strong>Subject:</strong> <span id="preview-subject"></span>
+                    </div>
+                    <div class="email-body" id="preview-body"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .email-templates-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .templates-list {
+        width: 400px;
+        flex-shrink: 0;
+    }
+    
+    .template-editor {
+        flex: 1;
+    }
+    
+    .template-variables {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .template-variables h4 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .variables-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .variable {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    
+    .variable:hover {
+        background-color: #dee2e6;
+    }
+    
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .email-preview {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+    }
+    
+    .email-subject {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .email-body {
+        white-space: pre-wrap;
+    }
+    
+    @media (max-width: 992px) {
+        .email-templates-container {
+            flex-direction: column;
+        }
+        
+        .templates-list {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    function previewTemplate() {
+        const subject = document.getElementById('subject').value;
+        const body = document.getElementById('body').value;
+        
+        // Replace common variables with sample data
+        const sampleData = {
+            '{{user_name}}': 'John Doe',
+            '{{user_email}}': 'john.doe@example.com',
+            '{{job_title}}': 'Software Engineer',
+            '{{company}}': 'Tech Corp',
+            '{{application_status}}': 'Under Review',
+            '{{interview_date}}': '2025-07-25',
+            '{{interview_time}}': '10:00 AM',
+            '{{reset_code}}': '123456'
+        };
+        
+        let previewSubject = subject;
+        let previewBody = body;
+        
+        for (const [variable, value] of Object.entries(sampleData)) {
+            previewSubject = previewSubject.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value);
+            previewBody = previewBody.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value);
+        }
+        
+        document.getElementById('preview-subject').textContent = previewSubject;
+        document.getElementById('preview-body').innerHTML = previewBody;
+        
+        $('#previewModal').modal('show');
+    }
+    
+    // Click to insert variable
+    document.querySelectorAll('.variable').forEach(variable => {
+        variable.addEventListener('click', function() {
+            const textarea = document.getElementById('body');
+            const variableText = this.textContent;
+            
+            // Insert at cursor position
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + variableText + text.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start + variableText.length, start + variableText.length);
+        });
+    });
+</script>
+{% endblock %}
