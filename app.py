@@ -4,6 +4,7 @@ Main Flask application entry point for the Job Application Agent.
 from flask import Flask
 from config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
 from api import api_bp
+from routes import main_bp
 from models.database import init_db
 from models.migrations import migration_manager
 from services.encryption_service import encryption_service
@@ -44,6 +45,7 @@ def create_app(config_name='Config'):
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(main_bp)
     
     return app
 

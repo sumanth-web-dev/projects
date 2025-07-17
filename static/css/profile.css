@@ -1,0 +1,163 @@
+/* Profile Management Styles */
+
+.profile-container {
+  background-color: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  margin-bottom: 30px;
+}
+
+.profile-container h2 {
+  margin-bottom: 25px;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 25px;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--light-text);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.3s;
+}
+
+.tab-btn:hover {
+  color: var(--primary-color);
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--primary-color);
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Profile Forms */
+.profile-form {
+  max-width: 800px;
+}
+
+.profile-form h3,
+.profile-form h4 {
+  margin-bottom: 20px;
+  color: var(--text-color);
+}
+
+/* Resume and Cover Letter Lists */
+.resume-list,
+.cover-letter-list {
+  margin-bottom: 30px;
+}
+
+.resume-item,
+.cover-letter-item {
+  background-color: var(--light-bg);
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.resume-header,
+.cover-letter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.resume-header h4,
+.cover-letter-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.resume-actions,
+.cover-letter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.resume-meta,
+.cover-letter-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--lighter-text);
+  font-size: 0.875rem;
+}
+
+.no-items {
+  color: var(--light-text);
+  font-style: italic;
+  padding: 15px 0;
+}
+
+/* File Upload Styling */
+input[type="file"] {
+  padding: 8px;
+  background-color: var(--light-bg);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab-btn {
+    flex: 1 0 auto;
+    text-align: center;
+  }
+  
+  .resume-header,
+  .cover-letter-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .resume-actions,
+  .cover-letter-actions {
+    margin-top: 10px;
+  }
+  
+  .resume-meta,
+  .cover-letter-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
