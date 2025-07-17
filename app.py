@@ -1,0 +1,34 @@
+"""
+Main Flask application entry point for the Job Application Agent.
+"""
+from flask import Flask
+from config import Config
+from api import api_bp
+from models.database import init_db
+from models.migrations import migration_manager
+
+
+def create_app(config_class=Config):
+    """Application factory pattern for creating Flask app."""
+    app = Flask(__name__)
+    config_instance = config_class()
+    app.config.from_object(config_instance)
+    
+    # Initialize configuration-specific settings
+    config_class.init_app(app)
+    
+    # Initialize database
+    init_db(app)
+    
+    # Initialize migration manager
+    migration_manager.init_app(app)
+    
+    # Register blueprints
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
+    return app
+
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -2,289 +2,356 @@
 
 ## Overview
 
-The Job Application Agent is a multi-component system that automates the job application process across various job platforms. The system consists of a resume parser, job scraper, matching engine, application generator, and web automation components working together to provide an end-to-end automated job application experience.
-
-The architecture follows a modular design with clear separation of concerns, allowing for easy maintenance and extension to support additional job platforms.
+The Job Application Agent is a comprehensive automation system that streamlines the job application process across multiple job platforms. The system integrates a Flask-based Python backend with SQLite database, a web-based frontend using vanilla HTML/CSS/JavaScript, and a Playwright-powered automation engine enhanced with AI capabilities for intelligent form filling and personalized response generation. The architecture prioritizes security, scalability, and adaptability to handle diverse job website structures while maintaining compliance with platform terms of service.
 
 ## Architecture
 
+The system follows a modular, service-oriented architecture with clear separation of concerns:
+
 ```mermaid
 graph TB
-    UI[Web Interface] --> API[REST API Layer]
-    API --> Auth[Authentication Service]
-    API --> Profile[Profile Manager]
-    API --> JobEngine[Job Search Engine]
-    API --> AppEngine[Application Engine]
-    API --> Monitor[Application Monitor]
+    subgraph "Frontend Layer"
+        UI[Web UI - HTML/CSS/JS]
+        Dashboard[Application Dashboard]
+        Profile[Profile Management]
+        Config[Configuration Interface]
+    end
     
-    Profile --> ResumeParser[Resume Parser]
-    Profile --> DB[(Database)]
+    subgraph "Backend Layer"
+        API[Flask REST API]
+        Auth[Authentication Service]
+        JobService[Job Search Service]
+        AppService[Application Service]
+        AIService[AI Response Generator]
+        ProfileService[Profile Management Service]
+        NotificationService[Notification Service]
+        SecurityService[Security & Encryption Service]
+    end
     
-    JobEngine --> Scrapers[Job Scrapers]
-    JobEngine --> Matcher[Job Matcher]
-    JobEngine --> Queue[Application Queue]
+    subgraph "Automation Layer"
+        PlaywrightEngine[Playwright Automation Engine]
+        SiteAdapters[Website Adapters]
+        FormFiller[Intelligent Form Filler]
+        AntiDetection[Anti-Detection System]
+        RateLimiter[Rate Limiting Controller]
+    end
     
-    AppEngine --> Generator[Content Generator]
-    AppEngine --> WebAuto[Web Automation]
-    AppEngine --> Queue
+    subgraph "Data Layer"
+        DB[(SQLite Database)]
+        FileStorage[Encrypted File Storage]
+        SessionStore[Session Management]
+    end
     
-    Scrapers --> LinkedIn[LinkedIn Scraper]
-    Scrapers --> Indeed[Indeed Scraper]
-    Scrapers --> Glassdoor[Glassdoor Scraper]
+    subgraph "External Services"
+        JobSites[Job Websites]
+        AIProvider[AI/LLM Provider]
+    end
     
-    WebAuto --> Browser[Browser Controller]
-    Browser --> Stealth[Anti-Detection]
+    UI --> API
+    Dashboard --> API
+    Profile --> API
+    Config --> API
     
-    Monitor --> Tracker[Application Tracker]
-    Monitor --> Dashboard[Analytics Dashboard]
+    API --> Auth
+    API --> JobService
+    API --> AppService
+    API --> AIService
+    API --> SecurityService
+    
+    JobService --> PlaywrightEngine
+    AppService --> PlaywrightEngine
+    AIService --> AIProvider
+    
+    PlaywrightEngine --> SiteAdapters
+    PlaywrightEngine --> FormFiller
+    PlaywrightEngine --> AntiDetection
+    PlaywrightEngine --> RateLimiter
+    
+    SiteAdapters --> JobSites
+    FormFiller --> JobSites
+    
+    API --> DB
+    API --> FileStorage
+    API --> SessionStore
+    
+    SecurityService --> FileStorage
+    SecurityService --> SessionStore
 ```
 
 ## Components and Interfaces
 
-### 1. Resume Parser Component
+### Frontend Components
 
-**Purpose:** Extract and structure information from uploaded resumes
+#### 1. Profile Management Interface
+- **Purpose**: User profile setup and configuration
+- **Key Features**:
+  - Personal information forms
+  - Resume/cover letter upload and management
+  - Job search preferences configuration
+  - Multiple template management
+- **Technology**: Vanilla HTML/CSS/JavaScript with modern ES6+ features
 
-**Interfaces:**
-- `parseResume(file: File) -> UserProfile`
-- `extractSkills(text: string) -> string[]`
-- `extractExperience(text: string) -> Experience[]`
-- `extractEducation(text: string) -> Education[]`
+#### 2. Dashboard Interface
+- **Purpose**: Application tracking and monitoring
+- **Key Features**:
+  - Real-time application status updates
+  - Job search results display
+  - Application history and analytics
+  - Manual intervention alerts
+- **Technology**: Dynamic JavaScript with WebSocket connections for real-time updates
 
-**Key Features:**
-- Support for PDF, DOCX, and TXT formats
-- OCR capability for scanned documents
-- NLP-based information extraction
-- Confidence scoring for extracted data
+#### 3. Configuration Interface
+- **Purpose**: System and website-specific settings
+- **Key Features**:
+  - Website adapter configuration
+  - Rate limiting settings
+  - Security preferences
+  - Automation scheduling
 
-### 2. Job Search Engine
+### Backend Services
 
-**Purpose:** Discover and evaluate job opportunities across multiple platforms
+#### 1. Flask REST API (`app.py`)
+- **Endpoints**:
+  - `/api/profile` - Profile CRUD operations
+  - `/api/jobs` - Job search and management
+  - `/api/applications` - Application tracking
+  - `/api/automation` - Automation control
+  - `/api/config` - System configuration
+- **Middleware**: Authentication, rate limiting, error handling
 
-**Interfaces:**
-- `searchJobs(criteria: SearchCriteria) -> JobPosting[]`
-- `evaluateMatch(job: JobPosting, profile: UserProfile) -> MatchScore`
-- `addToQueue(job: JobPosting, priority: number) -> void`
+#### 2. Job Search Service (`services/job_service.py`)
+- **Responsibilities**:
+  - Coordinate multi-site job searches
+  - Duplicate detection and consolidation
+  - Job filtering based on user preferences
+  - Search result caching
+- **Interface**:
+```python
+class JobSearchService:
+    def search_jobs(self, criteria: SearchCriteria) -> List[Job]
+    def filter_jobs(self, jobs: List[Job], preferences: UserPreferences) -> List[Job]
+    def detect_duplicates(self, jobs: List[Job]) -> List[Job]
+```
 
-**Key Features:**
-- Multi-platform job scraping
-- Intelligent job matching algorithm
-- Duplicate detection and filtering
-- Priority-based application queuing
+#### 3. Application Service (`services/application_service.py`)
+- **Responsibilities**:
+  - Manage application workflow
+  - Track application status
+  - Handle application retries and errors
+- **Interface**:
+```python
+class ApplicationService:
+    def submit_application(self, job: Job, user_profile: UserProfile) -> ApplicationResult
+    def track_application(self, application_id: str) -> ApplicationStatus
+    def retry_failed_application(self, application_id: str) -> ApplicationResult
+```
 
-### 3. Application Engine
+#### 4. AI Response Generator (`services/ai_service.py`)
+- **Responsibilities**:
+  - Generate contextual responses to custom questions
+  - Select appropriate resume/cover letter templates
+  - Analyze job descriptions for keyword matching
+- **Interface**:
+```python
+class AIService:
+    def generate_response(self, question: str, job_context: JobContext, user_profile: UserProfile) -> str
+    def select_best_template(self, job: Job, templates: List[Template]) -> Template
+    def analyze_job_requirements(self, job_description: str) -> JobAnalysis
+```
 
-**Purpose:** Generate customized applications and submit them automatically
+### Automation Engine
 
-**Interfaces:**
-- `generateCoverLetter(job: JobPosting, profile: UserProfile) -> string`
-- `customizeResume(job: JobPosting, profile: UserProfile) -> Document`
-- `submitApplication(job: JobPosting, materials: ApplicationMaterials) -> ApplicationResult`
+#### 1. Playwright Engine (`automation/playwright_engine.py`)
+- **Responsibilities**:
+  - Browser automation orchestration
+  - Session management
+  - Anti-detection measures
+- **Features**:
+  - Headless and headed browser modes
+  - Multiple browser contexts for different sites
+  - Human-like interaction patterns
+  - Screenshot capture for debugging
 
-**Key Features:**
-- AI-powered content generation
-- Dynamic resume formatting
-- Form field intelligence
-- Multi-step application handling
+#### 2. Website Adapters (`automation/adapters/`)
+- **Structure**: One adapter per job website
+- **Base Interface**:
+```python
+class WebsiteAdapter:
+    def login(self, credentials: Credentials) -> bool
+    def search_jobs(self, criteria: SearchCriteria) -> List[JobListing]
+    def apply_to_job(self, job: JobListing, application_data: ApplicationData) -> ApplicationResult
+    def get_selectors(self) -> SelectorConfig
+```
 
-### 4. Web Automation Component
-
-**Purpose:** Handle browser automation and anti-detection measures
-
-**Interfaces:**
-- `navigateToJob(url: string) -> void`
-- `fillApplicationForm(fields: FormField[]) -> void`
-- `handleCaptcha() -> boolean`
-- `submitForm() -> SubmissionResult`
-
-**Key Features:**
-- Headless browser control
-- Human-like interaction patterns
-- CAPTCHA handling
-- Rate limiting and delays
-
-### 5. Application Monitor
-
-**Purpose:** Track application status and provide analytics
-
-**Interfaces:**
-- `trackApplication(application: Application) -> void`
-- `updateStatus(applicationId: string, status: ApplicationStatus) -> void`
-- `generateReport(timeframe: DateRange) -> ApplicationReport`
-
-**Key Features:**
-- Real-time status tracking
-- Success rate analytics
-- Error logging and reporting
-- Performance metrics
+#### 3. Intelligent Form Filler (`automation/form_filler.py`)
+- **Capabilities**:
+  - Dynamic form field detection
+  - Intelligent field mapping
+  - File upload handling
+  - Custom question processing with AI integration
 
 ## Data Models
 
-### UserProfile
-```typescript
-interface UserProfile {
-  id: string;
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    location: string;
-  };
-  skills: string[];
-  experience: Experience[];
-  education: Education[];
-  preferences: JobPreferences;
-  resumeVersions: ResumeVersion[];
-}
+### Core Models
+
+#### User Profile
+```python
+class UserProfile:
+    id: str
+    personal_info: PersonalInfo
+    resumes: List[Resume]
+    cover_letters: List[CoverLetter]
+    preferences: JobPreferences
+    credentials: Dict[str, EncryptedCredentials]
+    created_at: datetime
+    updated_at: datetime
 ```
 
-### JobPosting
-```typescript
-interface JobPosting {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  requirements: string[];
-  salary?: SalaryRange;
-  platform: JobPlatform;
-  url: string;
-  postedDate: Date;
-  matchScore?: number;
-}
+#### Job
+```python
+class Job:
+    id: str
+    title: str
+    company: str
+    location: str
+    description: str
+    requirements: List[str]
+    salary_range: Optional[SalaryRange]
+    source_website: str
+    source_url: str
+    posted_date: datetime
+    discovered_at: datetime
 ```
 
-### Application
-```typescript
-interface Application {
-  id: string;
-  jobId: string;
-  userId: string;
-  status: ApplicationStatus;
-  submittedAt: Date;
-  materials: {
-    resume: Document;
-    coverLetter: string;
-    customFields: Record<string, any>;
-  };
-  result?: ApplicationResult;
-}
+#### Application
+```python
+class Application:
+    id: str
+    job_id: str
+    user_id: str
+    status: ApplicationStatus
+    submitted_at: Optional[datetime]
+    materials_used: ApplicationMaterials
+    custom_responses: Dict[str, str]
+    confirmation_details: Optional[ConfirmationDetails]
+    error_log: Optional[str]
 ```
 
-### JobPreferences
-```typescript
-interface JobPreferences {
-  jobTitles: string[];
-  industries: string[];
-  locations: string[];
-  salaryRange: SalaryRange;
-  employmentTypes: EmploymentType[];
-  excludedCompanies: string[];
-  maxApplicationsPerDay: number;
-}
+### Database Schema
+
+```sql
+-- Users table
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    encrypted_data TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Jobs table
+CREATE TABLE jobs (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    company TEXT NOT NULL,
+    location TEXT,
+    description TEXT,
+    source_website TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    posted_date TIMESTAMP,
+    discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_url)
+);
+
+-- Applications table
+CREATE TABLE applications (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    submitted_at TIMESTAMP,
+    materials_used TEXT,
+    custom_responses TEXT,
+    confirmation_details TEXT,
+    error_log TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
 ```
 
 ## Error Handling
 
 ### Error Categories
 
-1. **Parsing Errors**
-   - Invalid resume format
-   - Corrupted file uploads
-   - OCR failures
-
-2. **Scraping Errors**
-   - Website access blocked
-   - Rate limiting exceeded
-   - Page structure changes
-
-3. **Application Errors**
-   - Form submission failures
-   - Authentication issues
-   - CAPTCHA challenges
-
-4. **System Errors**
-   - Database connectivity
-   - External API failures
-   - Resource exhaustion
+1. **Network Errors**: Connection timeouts, DNS failures
+2. **Authentication Errors**: Invalid credentials, session expiration
+3. **Parsing Errors**: Website structure changes, missing elements
+4. **Rate Limiting**: Too many requests, temporary blocks
+5. **Application Errors**: Form validation failures, submission errors
 
 ### Error Handling Strategy
 
-- **Graceful Degradation:** Continue processing other applications when individual failures occur
-- **Retry Logic:** Implement exponential backoff for transient failures
-- **Circuit Breaker:** Temporarily disable problematic job platforms
-- **Fallback Mechanisms:** Use alternative scraping methods when primary approaches fail
-- **User Notification:** Alert users of critical failures requiring intervention
+```python
+class ErrorHandler:
+    def handle_error(self, error: Exception, context: ErrorContext) -> ErrorResponse:
+        if isinstance(error, NetworkError):
+            return self._handle_network_error(error, context)
+        elif isinstance(error, AuthenticationError):
+            return self._handle_auth_error(error, context)
+        elif isinstance(error, RateLimitError):
+            return self._handle_rate_limit_error(error, context)
+        else:
+            return self._handle_generic_error(error, context)
+```
+
+### Retry Logic
+- Exponential backoff for network errors
+- Immediate retry for transient failures
+- Manual intervention required for authentication issues
+- Automatic pause and resume for rate limiting
 
 ## Testing Strategy
 
 ### Unit Testing
-- Resume parsing accuracy tests
-- Job matching algorithm validation
-- Content generation quality tests
-- Form field mapping verification
+- **Backend Services**: Mock external dependencies, test business logic
+- **Automation Components**: Test selector logic, form filling algorithms
+- **AI Integration**: Mock AI responses, test response formatting
 
 ### Integration Testing
-- End-to-end application flow testing
-- Multi-platform scraping validation
-- Database transaction integrity
-- API endpoint functionality
+- **API Endpoints**: Test full request/response cycles
+- **Database Operations**: Test CRUD operations and data integrity
+- **Playwright Integration**: Test browser automation workflows
 
-### Performance Testing
-- Concurrent application processing
-- Large resume file handling
-- High-volume job scraping
-- Database query optimization
+### End-to-End Testing
+- **Complete Application Flow**: Profile setup → Job search → Application submission
+- **Multi-Website Testing**: Test across different job platforms
+- **Error Scenario Testing**: Test error handling and recovery
 
-### Security Testing
-- Credential encryption validation
-- Input sanitization testing
-- Authentication bypass attempts
-- Data privacy compliance
-
-### Browser Automation Testing
-- Cross-browser compatibility
-- Anti-detection effectiveness
-- Form submission reliability
-- Error recovery mechanisms
+### Testing Tools
+- **Backend**: pytest, Flask-Testing
+- **Frontend**: Jest for JavaScript testing
+- **Automation**: Playwright's built-in testing capabilities
+- **Database**: SQLite in-memory databases for testing
 
 ## Security Considerations
 
 ### Data Protection
-- Encrypt all stored credentials using AES-256
-- Hash sensitive user data
-- Implement secure session management
-- Regular security audits
+- All sensitive data encrypted at rest using AES-256
+- Credentials stored using industry-standard encryption
+- Secure key management with environment variables
+
+### Authentication & Authorization
+- Session-based authentication for web interface
+- API key authentication for automation processes
+- Role-based access control for multi-user scenarios
+
+### Anti-Detection Measures
+- Random delays between actions
+- Human-like mouse movements and typing patterns
+- User-agent rotation and browser fingerprint management
+- Respect for robots.txt and rate limiting
 
 ### Compliance
-- GDPR compliance for EU users
-- CCPA compliance for California users
-- Respect robots.txt and terms of service
-- Implement data retention policies
-
-### Access Control
-- Role-based access control
-- API rate limiting
-- Secure authentication flows
-- Audit logging for all actions
-
-## Scalability Design
-
-### Horizontal Scaling
-- Microservices architecture
-- Load balancer for API endpoints
-- Distributed job queue processing
-- Database sharding strategies
-
-### Performance Optimization
-- Caching frequently accessed data
-- Asynchronous processing for long-running tasks
-- Connection pooling for database access
-- CDN for static assets
-
-### Monitoring and Observability
-- Application performance monitoring
-- Real-time error tracking
-- Resource utilization metrics
-- User behavior analytics
+- GDPR compliance for data handling
+- Terms of service compliance for job websites
+- Ethical automation practices
