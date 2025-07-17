@@ -102,13 +102,16 @@ class NotificationService:
         
         # Create notifications table if it doesn't exist
         with app.app_context():
-            if not db.engine.has_table('notifications'):
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            if 'notifications' not in inspector.get_table_names():
                 self._create_notifications_table()
     
     def _create_notifications_table(self):
         """Create the notifications table if it doesn't exist."""
         try:
-            db.engine.execute("""
+            from sqlalchemy import text
+            db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS notifications (
                     id TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL,
@@ -120,7 +123,8 @@ class NotificationService:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users (id)
                 )
-            """)
+            """))
+            db.session.commit()
             logger.info("Notifications table created successfully")
         except Exception as e:
             logger.error(f"Error creating notifications table: {str(e)}")
@@ -144,16 +148,24 @@ class NotificationService:
             return None
         
         try:
+            from sqlalchemy import text
             notification_id = str(uuid.uuid4())
             
             # Insert notification into database
-            db.engine.execute(
+            db.session.execute(text(
                 """
                 INSERT INTO notifications (id, user_id, title, message, notification_type, related_entity_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                notification_id, user_id, title, message, notification_type, related_entity_id
-            )
+                VALUES (:id, :user_id, :title, :message, :notification_type, :related_entity_id)
+                """
+            ), {
+                "id": notification_id,
+                "user_id": user_id,
+                "title": title,
+                "message": message,
+                "notification_type": notification_type,
+                "related_entity_id": related_entity_id
+            })
+            db.session.commit()
             
             logger.info(f"Created notification {notification_id} for user {user_id}")
             return notification_id
@@ -175,21 +187,22 @@ class NotificationService:
             List[Dict[str, Any]]: List of notification dictionaries
         """
         try:
+            from sqlalchemy import text
             query = """
                 SELECT id, user_id, title, message, notification_type, related_entity_id, is_read, created_at
                 FROM notifications
-                WHERE user_id = ?
+                WHERE user_id = :user_id
             """
             
-            params = [user_id]
+            params = {"user_id": user_id}
             
             if unread_only:
                 query += " AND is_read = FALSE"
             
-            query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
+            query += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+            params.update({"limit": limit, "offset": offset})
             
-            result = db.engine.execute(query, *params)
+            result = db.session.execute(text(query), params)
             
             notifications = []
             for row in result:
@@ -221,10 +234,14 @@ class NotificationService:
             bool: True if successful, False otherwise
         """
         try:
-            db.engine.execute(
-                "UPDATE notifications SET is_read = ? WHERE id = ?",
-                is_read, notification_id
-            )
+            from sqlalchemy import text
+            db.session.execute(text(
+                "UPDATE notifications SET is_read = :is_read WHERE id = :id"
+            ), {
+                "is_read": is_read,
+                "id": notification_id
+            })
+            db.session.commit()
             
             logger.info(f"Marked notification {notification_id} as {'read' if is_read else 'unread'}")
             return True
@@ -242,10 +259,13 @@ class NotificationService:
             bool: True if successful, False otherwise
         """
         try:
-            db.engine.execute(
-                "UPDATE notifications SET is_read = TRUE WHERE user_id = ?",
-                user_id
-            )
+            from sqlalchemy import text
+            db.session.execute(text(
+                "UPDATE notifications SET is_read = TRUE WHERE user_id = :user_id"
+            ), {
+                "user_id": user_id
+            })
+            db.session.commit()
             
             logger.info(f"Marked all notifications as read for user {user_id}")
             return True
@@ -263,10 +283,13 @@ class NotificationService:
             bool: True if successful, False otherwise
         """
         try:
-            db.engine.execute(
-                "DELETE FROM notifications WHERE id = ?",
-                notification_id
-            )
+            from sqlalchemy import text
+            db.session.execute(text(
+                "DELETE FROM notifications WHERE id = :id"
+            ), {
+                "id": notification_id
+            })
+            db.session.commit()
             
             logger.info(f"Deleted notification {notification_id}")
             return True
@@ -284,10 +307,13 @@ class NotificationService:
             bool: True if successful, False otherwise
         """
         try:
-            db.engine.execute(
-                "DELETE FROM notifications WHERE user_id = ?",
-                user_id
-            )
+            from sqlalchemy import text
+            db.session.execute(text(
+                "DELETE FROM notifications WHERE user_id = :user_id"
+            ), {
+                "user_id": user_id
+            })
+            db.session.commit()
             
             logger.info(f"Deleted all notifications for user {user_id}")
             return True
@@ -305,10 +331,12 @@ class NotificationService:
             int: Count of unread notifications
         """
         try:
-            result = db.engine.execute(
-                "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = FALSE",
-                user_id
-            )
+            from sqlalchemy import text
+            result = db.session.execute(text(
+                "SELECT COUNT(*) FROM notifications WHERE user_id = :user_id AND is_read = FALSE"
+            ), {
+                "user_id": user_id
+            })
             
             count = result.scalar()
             return count or 0

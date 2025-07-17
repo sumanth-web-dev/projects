@@ -6,7 +6,8 @@ This module provides API endpoints for searching, filtering, and managing job li
 from flask import jsonify, request, g
 from api import api_bp
 from services.job_search_service import job_search_service
-from api.auth import auth_required, csrf_token_required
+from api.auth import auth_required
+from api.csrf import csrf_token_required
 from models.database import db
 
 

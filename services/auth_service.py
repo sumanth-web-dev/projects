@@ -165,6 +165,10 @@ class AuthService:
             hashed_password = self.hash_password(password)
             user_personal_data['password'] = hashed_password
             
+            # Initialize roles if not already set
+            if 'roles' not in user_personal_data:
+                user_personal_data['roles'] = ['user']  # Default role
+            
             # Create new user
             new_user = User(
                 id=user_id,
@@ -173,10 +177,6 @@ class AuthService:
             
             # Set personal data with encrypted password
             new_user.personal_data = user_personal_data
-            
-            # Initialize roles if not already set
-            if 'roles' not in user_personal_data:
-                user_personal_data['roles'] = ['user']  # Default role
             
             # Save to database
             db.session.add(new_user)

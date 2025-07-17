@@ -13,7 +13,6 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 from models.database import db
-from models.user import User
 from services.encryption_service import encryption_service
 
 # Set up logging
@@ -48,7 +47,7 @@ class ProfileService:
         os.makedirs(os.path.join(self._upload_folder, 'resumes'), exist_ok=True)
         os.makedirs(os.path.join(self._upload_folder, 'cover_letters'), exist_ok=True)
     
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> Optional["User"]:
         """Get a user by ID.
         
         Args:
@@ -58,12 +57,14 @@ class ProfileService:
             Optional[User]: The user if found, None otherwise
         """
         try:
+            # Import User here to avoid circular imports
+            from models.user import User
             return User.query.get(user_id)
         except Exception as e:
             logger.error(f"Error retrieving user: {str(e)}")
             return None
     
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> Optional["User"]:
         """Get a user by email.
         
         Args:
@@ -73,6 +74,8 @@ class ProfileService:
             Optional[User]: The user if found, None otherwise
         """
         try:
+            # Import User here to avoid circular imports
+            from models.user import User
             return User.query.filter_by(email=email.lower()).first()
         except Exception as e:
             logger.error(f"Error retrieving user by email: {str(e)}")

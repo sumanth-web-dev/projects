@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobs - Job Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+        }
+        .sidebar h2 {
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .sidebar a:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            margin: 0;
+        }
+        .jobs-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .job-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .job-card h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+        .job-card .company {
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+        .job-card .details {
+            margin-bottom: 1rem;
+        }
+        .job-card .details p {
+            margin: 0.25rem 0;
+        }
+        .job-card .actions {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>Job Application Agent</h2>
+            <ul>
+                <li><a href="{{ url_for('main.index') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('main.jobs') }}">Jobs</a></li>
+                <li><a href="{{ url_for('main.applications') }}">Applications</a></li>
+                <li><a href="{{ url_for('main.profile') }}">Profile</a></li>
+                <li><a href="{{ url_for('main.settings') }}">Settings</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <div class="page-header">
+                <h1>Jobs</h1>
+                <button class="btn primary">Search Jobs</button>
+            </div>
+            
+            <div class="jobs-container">
+                <div class="job-card">
+                    <h3>Senior Software Engineer</h3>
+                    <div class="company">Acme Corporation</div>
+                    <div class="details">
+                        <p><strong>Location:</strong> New York, NY</p>
+                        <p><strong>Salary:</strong> $120,000 - $150,000</p>
+                        <p><strong>Type:</strong> Full-time</p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary">View Details</button>
+                        <button class="btn primary">Apply</button>
+                    </div>
+                </div>
+                
+                <div class="job-card">
+                    <h3>Full Stack Developer</h3>
+                    <div class="company">Tech Innovations Inc.</div>
+                    <div class="details">
+                        <p><strong>Location:</strong> Remote</p>
+                        <p><strong>Salary:</strong> $100,000 - $130,000</p>
+                        <p><strong>Type:</strong> Full-time</p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary">View Details</button>
+                        <button class="btn primary">Apply</button>
+                    </div>
+                </div>
+                
+                <div class="job-card">
+                    <h3>DevOps Engineer</h3>
+                    <div class="company">Cloud Solutions Ltd.</div>
+                    <div class="details">
+                        <p><strong>Location:</strong> San Francisco, CA</p>
+                        <p><strong>Salary:</strong> $130,000 - $160,000</p>
+                        <p><strong>Type:</strong> Full-time</p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary">View Details</button>
+                        <button class="btn primary">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

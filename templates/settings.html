@@ -1,440 +1,281 @@
-{% extends "base.html" %}
-
-{% block title %}Settings - Job Application Agent{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
-{% endblock %}
-
-{% block content %}
-<div class="settings-container">
-    <h2>System Settings</h2>
-    
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="general">General</button>
-        <button class="tab-btn" data-tab="automation">Automation</button>
-        <button class="tab-btn" data-tab="security">Security</button>
-        <button class="tab-btn" data-tab="monitoring">System Status</button>
-    </div>
-    
-    <div class="tab-content">
-        <!-- General Settings Tab -->
-        <div class="tab-pane active" id="general">
-            <h3>General Settings</h3>
-            <form id="general-settings-form" method="POST" action="{{ url_for('api.settings.update_general') }}">
-                <div class="form-group">
-                    <label for="default_search_radius">Default Search Radius (miles)</label>
-                    <input type="number" id="default_search_radius" name="default_search_radius" 
-                           value="{{ settings.default_search_radius }}" min="5" max="100">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Job Application </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+        }
+        .sidebar h2 {
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .sidebar a:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            margin: 0;
+        }
+        .settings-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .settings-tabs {
+            display: flex;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 1.5rem;
+        }
+        .settings-tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: bold;
+        }
+        .settings-tab.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+        }
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+        .settings-section h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-group input {
+            width: auto;
+            margin-right: 0.5rem;
+        }
+        .checkbox-group label {
+            margin-bottom: 0;
+        }
+        .api-key-display {
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 1rem;
+        }
+        .system-status {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        .status-active {
+            background-color: #2ecc71;
+        }
+        .status-inactive {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>Job Application Agent</h2>
+            <ul>
+                <li><a href="{{ url_for('main.index') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('main.jobs') }}">Jobs</a></li>
+                <li><a href="{{ url_for('main.applications') }}">Applications</a></li>
+                <li><a href="{{ url_for('main.profile') }}">Profile</a></li>
+                <li><a href="{{ url_for('main.settings') }}">Settings</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <div class="page-header">
+                <h1>Settings</h1>
+                <button class="btn primary">Save Changes</button>
+            </div>
+            
+            <div class="settings-container">
+                <div class="settings-tabs">
+                    <div class="settings-tab active">General</div>
+                    <div class="settings-tab">Automation</div>
+                    <div class="settings-tab">Security</div>
+                    <div class="settings-tab">Integrations</div>
+                    <div class="settings-tab">System</div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="job_refresh_interval">Job Refresh Interval (hours)</label>
-                    <input type="number" id="job_refresh_interval" name="job_refresh_interval" 
-                           value="{{ settings.job_refresh_interval }}" min="1" max="24">
+                <div class="settings-section">
+                    <h3>General Settings</h3>
+                    <div class="form-group">
+                        <label for="theme">Theme</label>
+                        <select id="theme">
+                            <option selected>Light</option>
+                            <option>Dark</option>
+                            <option>System Default</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="search-radius">Default Search Radius (miles)</label>
+                        <input type="number" id="search-radius" value="25">
+                    </div>
+                    <div class="form-group">
+                        <label for="refresh-interval">Job Refresh Interval (hours)</label>
+                        <input type="number" id="refresh-interval" value="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Job Sources</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="linkedin" checked>
+                            <label for="linkedin">LinkedIn</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="indeed" checked>
+                            <label for="indeed">Indeed</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="glassdoor" checked>
+                            <label for="glassdoor">Glassdoor</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="monster">
+                            <label for="monster">Monster</label>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="default_job_sources">Default Job Sources</label>
+                <div class="settings-section">
+                    <h3>Automation Settings</h3>
                     <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" name="job_sources" value="linkedin" 
-                                  {% if 'linkedin' in settings.job_sources %}checked{% endif %}>
-                            LinkedIn
-                        </label>
-                        <label>
-                            <input type="checkbox" name="job_sources" value="indeed" 
-                                  {% if 'indeed' in settings.job_sources %}checked{% endif %}>
-                            Indeed
-                        </label>
-                        <label>
-                            <input type="checkbox" name="job_sources" value="glassdoor" 
-                                  {% if 'glassdoor' in settings.job_sources %}checked{% endif %}>
-                            Glassdoor
-                        </label>
+                        <input type="checkbox" id="auto-apply" checked>
+                        <label for="auto-apply">Enable Automated Applications</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="daily-limit">Daily Application Limit</label>
+                        <input type="number" id="daily-limit" value="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="browser-type">Browser Type</label>
+                        <select id="browser-type">
+                            <option selected>Chrome</option>
+                            <option>Firefox</option>
+                            <option>Edge</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="headless-mode" checked>
+                        <label for="headless-mode">Run in Headless Mode</label>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="theme">UI Theme</label>
-                    <select id="theme" name="theme">
-                        <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light</option>
-                        <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark</option>
-                        <option value="system" {% if settings.theme == 'system' %}selected{% endif %}>System Default</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn primary">Save General Settings</button>
-            </form>
-        </div>
-        
-        <!-- Automation Settings Tab -->
-        <div class="tab-pane" id="automation">
-            <h3>Automation Settings</h3>
-            <form id="automation-settings-form" method="POST" action="{{ url_for('api.settings.update_automation') }}">
-                <div class="form-group">
-                    <label for="auto_apply_enabled">Automatic Job Application</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="auto_apply_enabled" name="auto_apply_enabled" 
-                               {% if settings.auto_apply_enabled %}checked{% endif %}>
-                        <label for="auto_apply_enabled"></label>
+                <div class="system-status">
+                    <h3>System Status</h3>
+                    <div class="status-item">
+                        <div>
+                            <span class="status-indicator status-active"></span>
+                            Database Connection
+                        </div>
+                        <div>Active</div>
+                    </div>
+                    <div class="status-item">
+                        <div>
+                            <span class="status-indicator status-active"></span>
+                            Job Search Service
+                        </div>
+                        <div>Active</div>
+                    </div>
+                    <div class="status-item">
+                        <div>
+                            <span class="status-indicator status-inactive"></span>
+                            Automation Service
+                        </div>
+                        <div>Inactive</div>
+                    </div>
+                    <div class="status-item">
+                        <div>
+                            <span class="status-indicator status-active"></span>
+                            Notification Service
+                        </div>
+                        <div>Active</div>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="daily_application_limit">Daily Application Limit</label>
-                    <input type="number" id="daily_application_limit" name="daily_application_limit" 
-                           value="{{ settings.daily_application_limit }}" min="1" max="50">
-                </div>
-                
-                <div class="form-group">
-                    <label for="application_schedule">Application Schedule</label>
-                    <div class="schedule-grid">
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="monday" 
-                                      {% if 'monday' in settings.schedule_days %}checked{% endif %}>
-                                Monday
-                            </label>
-                            <select name="schedule_time_monday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.monday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="tuesday" 
-                                      {% if 'tuesday' in settings.schedule_days %}checked{% endif %}>
-                                Tuesday
-                            </label>
-                            <select name="schedule_time_tuesday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.tuesday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="wednesday" 
-                                      {% if 'wednesday' in settings.schedule_days %}checked{% endif %}>
-                                Wednesday
-                            </label>
-                            <select name="schedule_time_wednesday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.wednesday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="thursday" 
-                                      {% if 'thursday' in settings.schedule_days %}checked{% endif %}>
-                                Thursday
-                            </label>
-                            <select name="schedule_time_thursday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.thursday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="friday" 
-                                      {% if 'friday' in settings.schedule_days %}checked{% endif %}>
-                                Friday
-                            </label>
-                            <select name="schedule_time_friday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.friday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="saturday" 
-                                      {% if 'saturday' in settings.schedule_days %}checked{% endif %}>
-                                Saturday
-                            </label>
-                            <select name="schedule_time_saturday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.saturday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="schedule-day">
-                            <label>
-                                <input type="checkbox" name="schedule_days" value="sunday" 
-                                      {% if 'sunday' in settings.schedule_days %}checked{% endif %}>
-                                Sunday
-                            </label>
-                            <select name="schedule_time_sunday">
-                                {% for hour in range(0, 24) %}
-                                    <option value="{{ '%02d' % hour }}:00" 
-                                           {% if settings.schedule_times.sunday == '%02d:00' % hour %}selected{% endif %}>
-                                        {{ '%02d' % hour }}:00
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="browser_type">Browser Type</label>
-                    <select id="browser_type" name="browser_type">
-                        <option value="chromium" {% if settings.browser_type == 'chromium' %}selected{% endif %}>Chromium</option>
-                        <option value="firefox" {% if settings.browser_type == 'firefox' %}selected{% endif %}>Firefox</option>
-                        <option value="webkit" {% if settings.browser_type == 'webkit' %}selected{% endif %}>WebKit</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="headless_mode">Headless Mode</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="headless_mode" name="headless_mode" 
-                               {% if settings.headless_mode %}checked{% endif %}>
-                        <label for="headless_mode"></label>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn primary">Save Automation Settings</button>
-            </form>
-        </div>
-        
-        <!-- Security Settings Tab -->
-        <div class="tab-pane" id="security">
-            <h3>Security Settings</h3>
-            <form id="security-settings-form" method="POST" action="{{ url_for('api.settings.update_security') }}">
-                <div class="form-group">
-                    <label for="enable_2fa">Two-Factor Authentication</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="enable_2fa" name="enable_2fa" 
-                               {% if settings.enable_2fa %}checked{% endif %}>
-                        <label for="enable_2fa"></label>
-                    </div>
-                    {% if not settings.enable_2fa %}
-                        <button type="button" class="btn secondary" id="setup_2fa">Set Up 2FA</button>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group">
-                    <label for="session_timeout">Session Timeout (minutes)</label>
-                    <input type="number" id="session_timeout" name="session_timeout" 
-                           value="{{ settings.session_timeout }}" min="5" max="120">
-                </div>
-                
-                <h4>Credential Management</h4>
-                <div class="credentials-section">
-                    <div class="credential-item">
-                        <div class="credential-header">
-                            <h5>LinkedIn</h5>
-                            <span class="credential-status {% if settings.credentials.linkedin %}valid{% else %}missing{% endif %}">
-                                {% if settings.credentials.linkedin %}Configured{% else %}Not Configured{% endif %}
-                            </span>
-                        </div>
-                        <div class="credential-actions">
-                            <button type="button" class="btn secondary" data-action="edit" data-service="linkedin">
-                                {% if settings.credentials.linkedin %}Update{% else %}Add{% endif %}
-                            </button>
-                            {% if settings.credentials.linkedin %}
-                                <button type="button" class="btn danger" data-action="delete" data-service="linkedin">Remove</button>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="credential-item">
-                        <div class="credential-header">
-                            <h5>Indeed</h5>
-                            <span class="credential-status {% if settings.credentials.indeed %}valid{% else %}missing{% endif %}">
-                                {% if settings.credentials.indeed %}Configured{% else %}Not Configured{% endif %}
-                            </span>
-                        </div>
-                        <div class="credential-actions">
-                            <button type="button" class="btn secondary" data-action="edit" data-service="indeed">
-                                {% if settings.credentials.indeed %}Update{% else %}Add{% endif %}
-                            </button>
-                            {% if settings.credentials.indeed %}
-                                <button type="button" class="btn danger" data-action="delete" data-service="indeed">Remove</button>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="credential-item">
-                        <div class="credential-header">
-                            <h5>Glassdoor</h5>
-                            <span class="credential-status {% if settings.credentials.glassdoor %}valid{% else %}missing{% endif %}">
-                                {% if settings.credentials.glassdoor %}Configured{% else %}Not Configured{% endif %}
-                            </span>
-                        </div>
-                        <div class="credential-actions">
-                            <button type="button" class="btn secondary" data-action="edit" data-service="glassdoor">
-                                {% if settings.credentials.glassdoor %}Update{% else %}Add{% endif %}
-                            </button>
-                            {% if settings.credentials.glassdoor %}
-                                <button type="button" class="btn danger" data-action="delete" data-service="glassdoor">Remove</button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <h4>API Access</h4>
-                <div class="form-group">
-                    <label for="enable_api_access">Enable API Access</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="enable_api_access" name="enable_api_access" 
-                               {% if settings.enable_api_access %}checked{% endif %}>
-                        <label for="enable_api_access"></label>
-                    </div>
-                </div>
-                
-                <div class="form-group" id="api_key_section" {% if not settings.enable_api_access %}style="display: none;"{% endif %}>
-                    <label for="api_key">API Key</label>
-                    <div class="api-key-display">
-                        <input type="text" id="api_key" value="{{ settings.api_key }}" readonly>
-                        <button type="button" class="btn secondary" id="copy_api_key">Copy</button>
-                        <button type="button" class="btn secondary" id="regenerate_api_key">Regenerate</button>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn primary">Save Security Settings</button>
-            </form>
-        </div>
-        
-        <!-- System Status Tab -->
-        <div class="tab-pane" id="monitoring">
-            <h3>System Status</h3>
-            
-            <div class="status-card">
-                <h4>Automation Status</h4>
-                <div class="status-indicator {{ 'active' if system_status.automation_active else 'inactive' }}">
-                    {{ 'Active' if system_status.automation_active else 'Inactive' }}
-                </div>
-                <div class="status-details">
-                    <p>Last Run: {{ system_status.last_automation_run }}</p>
-                    <p>Next Scheduled Run: {{ system_status.next_automation_run }}</p>
-                    <p>Applications Today: {{ system_status.applications_today }} / {{ settings.daily_application_limit }}</p>
-                </div>
-            </div>
-            
-            <div class="status-card">
-                <h4>System Resources</h4>
-                <div class="resource-meters">
-                    <div class="resource-meter">
-                        <label>CPU Usage</label>
-                        <div class="meter">
-                            <div class="meter-fill" style="width: {{ system_status.cpu_usage }}%"></div>
-                        </div>
-                        <span>{{ system_status.cpu_usage }}%</span>
-                    </div>
-                    
-                    <div class="resource-meter">
-                        <label>Memory Usage</label>
-                        <div class="meter">
-                            <div class="meter-fill" style="width: {{ system_status.memory_usage }}%"></div>
-                        </div>
-                        <span>{{ system_status.memory_usage }}%</span>
-                    </div>
-                    
-                    <div class="resource-meter">
-                        <label>Disk Usage</label>
-                        <div class="meter">
-                            <div class="meter-fill" style="width: {{ system_status.disk_usage }}%"></div>
-                        </div>
-                        <span>{{ system_status.disk_usage }}%</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="status-card">
-                <h4>Recent Activity</h4>
-                <table class="activity-log">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Event</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in system_status.recent_logs %}
-                        <tr>
-                            <td>{{ log.timestamp }}</td>
-                            <td>{{ log.event }}</td>
-                            <td class="log-status {{ log.status }}">{{ log.status }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <a href="{{ url_for('logs') }}" class="btn secondary">View All Logs</a>
-            </div>
-            
-            <div class="action-buttons">
-                <button type="button" class="btn primary" id="start_automation" 
-                        {{ 'disabled' if system_status.automation_active else '' }}>
-                    Start Automation
-                </button>
-                <button type="button" class="btn danger" id="stop_automation" 
-                        {{ 'disabled' if not system_status.automation_active else '' }}>
-                    Stop Automation
-                </button>
-                <button type="button" class="btn secondary" id="run_diagnostics">Run Diagnostics</button>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Credential Modal -->
-<div id="credential-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3 id="credential-modal-title">Add Credentials</h3>
-        <form id="credential-form">
-            <input type="hidden" id="credential-service" name="service">
-            
-            <div class="form-group">
-                <label for="credential-username">Username/Email</label>
-                <input type="text" id="credential-username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="credential-password">Password</label>
-                <input type="password" id="credential-password" name="password" required>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn secondary" id="cancel-credential">Cancel</button>
-                <button type="submit" class="btn primary">Save Credentials</button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
-{% endblock %}
+</body>
+</html>

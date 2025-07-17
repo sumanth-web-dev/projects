@@ -172,7 +172,9 @@ class MonitoringService:
         
         # Create metrics table if it doesn't exist
         with app.app_context():
-            if not db.engine.has_table('system_metrics'):
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            if 'system_metrics' not in inspector.get_table_names():
                 self._create_metrics_tables()
         
         # Start metrics collection if enabled
@@ -185,8 +187,11 @@ class MonitoringService:
     def _create_metrics_tables(self):
         """Create metrics tables if they don't exist."""
         try:
+            # Use SQLAlchemy 2.0 syntax with text()
+            from sqlalchemy import text
+            
             # System metrics table
-            db.engine.execute("""
+            db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS system_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TIMESTAMP NOT NULL,
@@ -196,10 +201,10 @@ class MonitoringService:
                     active_connections INTEGER NOT NULL,
                     db_connection_pool TEXT NOT NULL
                 )
-            """)
+            """))
             
             # Application metrics table
-            db.engine.execute("""
+            db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS application_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TIMESTAMP NOT NULL,
@@ -208,10 +213,10 @@ class MonitoringService:
                     avg_response_time REAL NOT NULL,
                     active_users INTEGER NOT NULL
                 )
-            """)
+            """))
             
             # Automation metrics table
-            db.engine.execute("""
+            db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS automation_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TIMESTAMP NOT NULL,
@@ -221,12 +226,15 @@ class MonitoringService:
                     success_rate REAL NOT NULL,
                     avg_application_time REAL NOT NULL
                 )
-            """)
+            """))
             
             # Create index on timestamp for faster queries
-            db.engine.execute("CREATE INDEX IF NOT EXISTS idx_system_metrics_timestamp ON system_metrics (timestamp)")
-            db.engine.execute("CREATE INDEX IF NOT EXISTS idx_application_metrics_timestamp ON application_metrics (timestamp)")
-            db.engine.execute("CREATE INDEX IF NOT EXISTS idx_automation_metrics_timestamp ON automation_metrics (timestamp)")
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_system_metrics_timestamp ON system_metrics (timestamp)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_application_metrics_timestamp ON application_metrics (timestamp)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_automation_metrics_timestamp ON automation_metrics (timestamp)"))
+            
+            # Commit the changes
+            db.session.commit()
             
             logger.info("Metrics tables created successfully")
         except Exception as e:
@@ -343,15 +351,21 @@ class MonitoringService:
             if self.app is not None:
                 with self.app.app_context():
                     try:
-                        db.engine.execute(
+                        db.session.execute(text(
                             """
                             INSERT INTO system_metrics 
                             (timestamp, cpu_usage, memory_usage, disk_usage, active_connections, db_connection_pool)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                            """,
-                            timestamp, cpu_usage, memory_usage, disk_usage, 
-                            connections, json.dumps(db_stats)
-                        )
+                            VALUES (:timestamp, :cpu, :memory, :disk, :connections, :db_stats)
+                            """
+                        ), {
+                            "timestamp": timestamp, 
+                            "cpu": cpu_usage, 
+                            "memory": memory_usage, 
+                            "disk": disk_usage, 
+                            "connections": connections, 
+                            "db_stats": json.dumps(db_stats)
+                        })
+                        db.session.commit()
                     except Exception as e:
                         logger.error(f"Error storing system metrics: {str(e)}")
             
@@ -383,9 +397,9 @@ class MonitoringService:
                 with self.app.app_context():
                     # Example: Count active users from database
                     try:
-                        result = db.engine.execute(
+                        result = db.session.execute(text(
                             "SELECT COUNT(*) FROM users WHERE last_active > datetime('now', '-15 minutes')"
-                        )
+                        ))
                         active_users = result.scalar() or 0
                     except Exception as e:
                         logger.error(f"Error counting active users: {str(e)}")
@@ -410,14 +424,20 @@ class MonitoringService:
             if self.app is not None:
                 with self.app.app_context():
                     try:
-                        db.engine.execute(
+                        db.session.execute(text(
                             """
                             INSERT INTO application_metrics 
                             (timestamp, request_count, error_count, avg_response_time, active_users)
-                            VALUES (?, ?, ?, ?, ?)
-                            """,
-                            timestamp, request_count, error_count, avg_response_time, active_users
-                        )
+                            VALUES (:timestamp, :req_count, :err_count, :avg_time, :active_users)
+                            """
+                        ), {
+                            "timestamp": timestamp,
+                            "req_count": request_count,
+                            "err_count": error_count,
+                            "avg_time": avg_response_time,
+                            "active_users": active_users
+                        })
+                        db.session.commit()
                     except Exception as e:
                         logger.error(f"Error storing application metrics: {str(e)}")
             
@@ -450,26 +470,26 @@ class MonitoringService:
                 with self.app.app_context():
                     try:
                         # Count active automation sessions
-                        result = db.engine.execute(
+                        result = db.session.execute(text(
                             "SELECT COUNT(*) FROM applications WHERE status = 'in_progress'"
-                        )
+                        ))
                         active_sessions = result.scalar() or 0
                         
                         # Count applications submitted in the last 24 hours
-                        result = db.engine.execute(
+                        result = db.session.execute(text(
                             "SELECT COUNT(*) FROM applications WHERE submitted_at > datetime('now', '-1 day')"
-                        )
+                        ))
                         applications_submitted = result.scalar() or 0
                         
                         # Calculate success rate
-                        result = db.engine.execute(
+                        result = db.session.execute(text(
                             """
                             SELECT 
                                 COUNT(CASE WHEN status = 'submitted' THEN 1 END) * 100.0 / COUNT(*) as success_rate
                             FROM applications
                             WHERE created_at > datetime('now', '-1 day')
                             """
-                        )
+                        ))
                         success_rate = result.scalar() or 0.0
                         
                     except Exception as e:
@@ -496,16 +516,23 @@ class MonitoringService:
             if self.app is not None:
                 with self.app.app_context():
                     try:
-                        db.engine.execute(
+                        db.session.execute(text(
                             """
                             INSERT INTO automation_metrics 
                             (timestamp, active_sessions, jobs_processed, applications_submitted, 
                              success_rate, avg_application_time)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                            """,
-                            timestamp, active_sessions, jobs_processed, applications_submitted,
-                            success_rate, avg_application_time
-                        )
+                            VALUES (:timestamp, :active_sessions, :jobs_processed, :applications_submitted, 
+                             :success_rate, :avg_application_time)
+                            """
+                        ), {
+                            "timestamp": timestamp, 
+                            "active_sessions": active_sessions, 
+                            "jobs_processed": jobs_processed, 
+                            "applications_submitted": applications_submitted,
+                            "success_rate": success_rate, 
+                            "avg_application_time": avg_application_time
+                        })
+                        db.session.commit()
                     except Exception as e:
                         logger.error(f"Error storing automation metrics: {str(e)}")
             

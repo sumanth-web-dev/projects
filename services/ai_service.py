@@ -10,7 +10,7 @@ import logging
 import json
 from typing import Dict, List, Optional, Tuple, Any, Set
 from models.job import Job
-from models.user import User
+# Import User model lazily to avoid circular imports
 
 # Set up logging
 logger = logging.getLogger(__name__)

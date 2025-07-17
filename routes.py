@@ -10,14 +10,15 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    """Render the dashboard page."""
-    # Get the current user's ID
+    """Render the home page."""
+    # Check if user is logged in
     user_id = auth_service.get_current_user_id()
-    if not user_id:
-        flash('Please log in to access your dashboard.', 'error')
-        return redirect(url_for('auth.login'))
-    
-    return render_template('dashboard.html')
+    if user_id:
+        # User is logged in, show dashboard
+        return render_template('dashboard.html', user_id=user_id)
+    else:
+        # User is not logged in, show welcome page
+        return render_template('welcome.html')
 
 @main_bp.route('/profile')
 def profile():
@@ -28,7 +29,11 @@ def profile():
         flash('Please log in to access your profile.', 'error')
         return redirect(url_for('auth.login'))
     
-    profile_data = profile_service.get_profile(user_id)
+    success, profile_data, message = profile_service.get_profile(user_id)
+    if not success:
+        flash(message, 'error')
+        return redirect(url_for('main.index'))
+    
     return render_template('profile.html', profile=profile_data)
 
 @main_bp.route('/jobs')

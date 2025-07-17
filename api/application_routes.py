@@ -7,7 +7,8 @@ import uuid
 from flask import jsonify, request, g
 from api import api_bp
 from services.application_service import application_service
-from api.auth import auth_required, api_key_required, csrf_token_required
+from api.auth import auth_required, api_key_required
+from api.csrf import csrf_token_required
 from models.application import ApplicationStatus
 
 
@@ -375,7 +376,7 @@ def get_automation_status():
 
 @api_bp.route('/automation/start', methods=['POST'])
 @api_key_required
-def start_automation():
+def start_application_automation():
     """Start an automation process for job applications."""
     user_id = g.user_id
     data = request.get_json() or {}
@@ -405,7 +406,7 @@ def start_automation():
 
 @api_bp.route('/automation/stop', methods=['POST'])
 @api_key_required
-def stop_automation():
+def stop_application_automation():
     """Stop an active automation process."""
     user_id = g.user_id
     data = request.get_json() or {}

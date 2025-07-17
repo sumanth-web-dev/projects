@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    image: job-application-agent
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env.production
+    volumes:
+      - ./instance:/app/instance
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://postgres:securepassword123@db:5432/job_agent
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - GUNICORN_WORKERS=4
+      - GUNICORN_TIMEOUT=120
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=securepassword123
+      - POSTGRES_DB=job_agent
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backup:
+    image: job-application-agent
+    volumes:
+      - ./instance:/app/instance
+      - ./backups:/app/backups
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:securepassword123@db:5432/job_agent
+    command: python -m scripts.backup_db
+    profiles:
+      - backup
+
+volumes:
+  postgres_data:
+  redis_data:
