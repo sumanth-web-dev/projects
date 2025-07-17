@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Playwright Automation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', Arial, sans-serif; margin: 0; background: #f4f6fb; }
+        .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 32px 36px; }
+        h2 { text-align: center; color: #2d3a4b; margin-bottom: 24px; }
+        label { font-weight: 700; color: #2d3a4b; margin-bottom: 6px; }
+        input, textarea, select { display: block; width: 100%; margin-bottom: 18px; padding: 10px; border: 1px solid #cfd8dc; border-radius: 5px; font-size: 1rem; background: #f9fafb; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #1976d2; background: #fff; }
+        button { padding: 12px 28px; background: #1976d2; color: #fff; border: none; border-radius: 5px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        button:disabled { background: #90caf9; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: #1565c0; }
+        .result { margin-top: 24px; padding: 16px; border: 1px solid #cfd8dc; background: #f9f9f9; border-radius: 5px; font-family: 'Roboto Mono', monospace; white-space: pre-wrap; word-break: break-all; }
+        .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #cfd8dc; border-top: 3px solid #1976d2; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; vertical-align: middle; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .history { margin-top: 32px; }
+        .history h3 { margin-bottom: 10px; color: #2d3a4b; }
+        .history-list { list-style: none; padding: 0; }
+        .history-list li { background: #f4f6fb; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 8px; padding: 8px 12px; font-size: 0.97rem; cursor: pointer; transition: background 0.2s; }
+        .history-list li:hover { background: #e3f2fd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>MCP Playwright Automation</h2>
+        <form id="actionForm" autocomplete="off">
+            <label for="action">Action:</label>
+            <select id="action" name="action" required>
+                <option value="">-- Select Action --</option>
+                <option value="example">Example</option>
+                <option value="navigate">Navigate</option>
+                <option value="click">Click</option>
+                <option value="type">Type</option>
+                <option value="screenshot">Screenshot</option>
+                <option value="chat">Chat</option>
+            </select>
+            <label for="params">Parameters (JSON):</label>
+            <textarea id="params" name="params" rows="4" placeholder='{"key": "value"}'></textarea>
+            <button type="submit" id="runBtn">Run</button>
+            <span id="spinner" class="spinner" style="display:none;"></span>
+        </form>
+        <div class="result" id="result"></div>
+        <div class="history" id="history">
+            <h3>Request History</h3>
+            <ul class="history-list" id="historyList"></ul>
+        </div>
+        <div class="chatbox" id="chatbox">
+            <h3>Chat with MCP Playwright</h3>
+            <div id="chatHistory" style="height:220px;overflow-y:auto;background:#f4f6fb;border:1px solid #cfd8dc;border-radius:5px;padding:10px 12px;margin-bottom:10px;"></div>
+            <form id="chatForm" style="display:flex;gap:8px;">
+                <input type="text" id="chatUser" placeholder="Your name" style="width:120px;" value="User" required>
+                <input type="text" id="chatMessage" placeholder="Type a message..." style="flex:1;" required>
+                <button type="submit" id="chatSendBtn">Send</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById('actionForm');
+        const resultDiv = document.getElementById('result');
+        const spinner = document.getElementById('spinner');
+        const runBtn = document.getElementById('runBtn');
+        const historyList = document.getElementById('historyList');
+        let history = JSON.parse(localStorage.getItem('mcp_history') || '[]');
+
+        // Chat elements
+        const chatForm = document.getElementById('chatForm');
+        const chatUser = document.getElementById('chatUser');
+        const chatMessage = document.getElementById('chatMessage');
+        const chatSendBtn = document.getElementById('chatSendBtn');
+        const chatHistoryDiv = document.getElementById('chatHistory');
+
+        function updateHistoryUI() {
+            historyList.innerHTML = '';
+            if (history.length === 0) {
+                historyList.innerHTML = '<li style="color:#888;">No history yet.</li>';
+                return;
+            }
+            history.slice().reverse().forEach((item, idx) => {
+                const li = document.createElement('li');
+                li.textContent = `${item.action} | ${JSON.stringify(item.params)}`;
+                li.title = 'Click to reuse';
+                li.onclick = () => {
+                    document.getElementById('action').value = item.action;
+                    document.getElementById('params').value = JSON.stringify(item.params, null, 2);
+                };
+                historyList.appendChild(li);
+            });
+        }
+
+        function showSpinner(show) {
+            spinner.style.display = show ? 'inline-block' : 'none';
+            runBtn.disabled = show;
+        }
+
+        function formatJSON(obj) {
+            return JSON.stringify(obj, null, 2);
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const action = document.getElementById('action').value;
+            let params = {};
+            try {
+                params = JSON.parse(document.getElementById('params').value || '{}');
+            } catch (err) {
+                resultDiv.textContent = '❌ Invalid JSON in parameters.';
+                resultDiv.style.color = '#c62828';
+                return;
+            }
+            resultDiv.textContent = '';
+            resultDiv.style.color = '#222';
+            showSpinner(true);
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, params })
+                });
+                const data = await response.json();
+                resultDiv.textContent = formatJSON(data);
+                if (response.ok) {
+                    // Save to history
+                    history.push({ action, params });
+                    if (history.length > 10) history = history.slice(-10);
+                    localStorage.setItem('mcp_history', JSON.stringify(history));
+                    updateHistoryUI();
+                } else {
+                    resultDiv.style.color = '#c62828';
+                }
+            } catch (err) {
+                resultDiv.textContent = '❌ Error: ' + err.message;
+                resultDiv.style.color = '#c62828';
+            } finally {
+                showSpinner(false);
+            }
+        });
+
+        // Chat features
+        function renderChatHistory(history) {
+            chatHistoryDiv.innerHTML = '';
+            if (!history || history.length === 0) {
+                chatHistoryDiv.innerHTML = '<span style="color:#888;">No chat yet.</span>';
+                return;
+            }
+            history.forEach(msg => {
+                const div = document.createElement('div');
+                div.style.marginBottom = '6px';
+                div.innerHTML = `<b style='color:#1976d2;'>${msg.user}:</b> <span>${msg.message}</span>`;
+                chatHistoryDiv.appendChild(div);
+            });
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        }
+
+        async function sendChat(user, message) {
+            chatSendBtn.disabled = true;
+            chatMessage.disabled = true;
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'chat', params: { user, message } })
+                });
+                const data = await response.json();
+                if (data && data.history) {
+                    renderChatHistory(data.history);
+                }
+            } catch (err) {
+                alert('Chat error: ' + err.message);
+            } finally {
+                chatSendBtn.disabled = false;
+                chatMessage.disabled = false;
+                chatMessage.value = '';
+                chatMessage.focus();
+            }
+        }
+
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const user = chatUser.value.trim() || 'User';
+            const message = chatMessage.value.trim();
+            if (!message) return;
+            sendChat(user, message);
+        });
+
+        // On page load, update history and fetch chat
+        updateHistoryUI();
+        // Fetch initial chat history
+        (async function() {
+            try {
+                const response = await fetch('/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'chat', params: { user: 'System', message: '' } })
+                });
+                const data = await response.json();
+                if (data && data.history) {
+                    renderChatHistory(data.history);
+                }
+            } catch {}
+        })();
+    </script>
+</body>
+</html>
