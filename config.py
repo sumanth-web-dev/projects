@@ -34,6 +34,11 @@ class Config:
     
     # Session settings
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+    SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to cookies
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    SESSION_REFRESH_EACH_REQUEST = True  # Refresh session on each request
+    SESSION_MAX_AGE = 86400  # 24 hours in seconds
     
     # File upload settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size

@@ -3,6 +3,7 @@ Tests for the authentication service.
 """
 import unittest
 import uuid
+import datetime
 from flask import Flask, session
 from models.database import db, init_db
 from models.user import User
@@ -51,7 +52,8 @@ class TestAuthService(unittest.TestCase):
             'first_name': 'Test',
             'last_name': 'User',
             'phone': '+1234567890',
-            'address': '123 Test St'
+            'address': '123 Test St',
+            'roles': ['user']
         }
         test_user.personal_data = personal_data
         
@@ -127,6 +129,10 @@ class TestAuthService(unittest.TestCase):
         self.assertIsNotNone(user)
         self.assertEqual(user.id, user_id)
         
+        # Verify roles were set
+        roles = auth_service.get_user_roles(user_id)
+        self.assertIn('user', roles)
+        
         # Test duplicate email
         success, user_id, message = auth_service.create_user(
             self.test_email, password
@@ -152,6 +158,13 @@ class TestAuthService(unittest.TestCase):
         self.assertTrue(valid)
         self.assertEqual(user_id, self.test_user_id)
         
+        # Validate API key with metadata
+        valid, user_id, metadata = auth_service.validate_api_key_with_metadata(api_key)
+        
+        self.assertTrue(valid)
+        self.assertEqual(user_id, self.test_user_id)
+        self.assertEqual(metadata['description'], "Test API Key")
+        
         # Revoke API key
         success, message = auth_service.revoke_api_key(
             self.test_user_id, api_key
@@ -165,6 +178,44 @@ class TestAuthService(unittest.TestCase):
         self.assertFalse(valid)
         self.assertIsNone(user_id)
     
+    def test_api_key_with_permissions_and_expiration(self):
+        """Test API key with permissions and expiration date."""
+        # Generate API key with permissions and expiration
+        permissions = ['read', 'write']
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(days=30)
+        
+        success, api_key, message = auth_service.generate_api_key(
+            self.test_user_id, "Test API Key with Permissions", permissions, expires_at
+        )
+        
+        self.assertTrue(success)
+        self.assertIsNotNone(api_key)
+        
+        # Validate API key with metadata
+        valid, user_id, metadata = auth_service.validate_api_key_with_metadata(api_key)
+        
+        self.assertTrue(valid)
+        self.assertEqual(user_id, self.test_user_id)
+        self.assertEqual(metadata['description'], "Test API Key with Permissions")
+        self.assertEqual(metadata['permissions'], permissions)
+        self.assertIsNotNone(metadata['expires_at'])
+        
+        # Generate expired API key
+        expired_at = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+        
+        success, expired_api_key, message = auth_service.generate_api_key(
+            self.test_user_id, "Expired API Key", permissions, expired_at
+        )
+        
+        self.assertTrue(success)
+        
+        # Validate expired API key
+        valid, user_id, metadata = auth_service.validate_api_key_with_metadata(expired_api_key)
+        
+        self.assertFalse(valid)
+        self.assertIsNone(user_id)
+        self.assertIsNone(metadata)
+    
     def test_session_management(self):
         """Test session management."""
         with self.app.test_request_context():
@@ -174,6 +225,9 @@ class TestAuthService(unittest.TestCase):
             # Check session data
             self.assertEqual(session.get('user_id'), self.test_user_id)
             self.assertTrue(session.get('authenticated'))
+            self.assertIsNotNone(session.get('login_time'))
+            self.assertIsNotNone(session.get('created_at'))
+            self.assertIsNotNone(session.get('csrf_token'))
             
             # Get current user ID
             user_id = auth_service.get_current_user_id()
@@ -189,6 +243,66 @@ class TestAuthService(unittest.TestCase):
             # Get current user ID after logout
             user_id = auth_service.get_current_user_id()
             self.assertIsNone(user_id)
+    
+    def test_user_roles(self):
+        """Test user role management."""
+        # Test getting roles
+        roles = auth_service.get_user_roles(self.test_user_id)
+        self.assertIn('user', roles)
+        
+        # Test assigning a new role
+        success, message = auth_service.assign_role(self.test_user_id, 'admin')
+        self.assertTrue(success)
+        
+        # Verify role was assigned
+        roles = auth_service.get_user_roles(self.test_user_id)
+        self.assertIn('user', roles)
+        self.assertIn('admin', roles)
+        
+        # Test removing a role
+        success, message = auth_service.remove_role(self.test_user_id, 'admin')
+        self.assertTrue(success)
+        
+        # Verify role was removed
+        roles = auth_service.get_user_roles(self.test_user_id)
+        self.assertIn('user', roles)
+        self.assertNotIn('admin', roles)
+        
+        # Test with non-existent user
+        roles = auth_service.get_user_roles('non-existent-id')
+        self.assertEqual(roles, [])
+    
+    def test_password_update(self):
+        """Test password update functionality."""
+        new_password = "NewPassword456!"
+        
+        # Test successful password update
+        success, message = auth_service.update_password(
+            self.test_user_id, self.test_password, new_password
+        )
+        
+        self.assertTrue(success)
+        
+        # Verify new password works for authentication
+        success, user_data, message = auth_service.authenticate_user(
+            self.test_email, new_password
+        )
+        
+        self.assertTrue(success)
+        
+        # Test with incorrect current password
+        success, message = auth_service.update_password(
+            self.test_user_id, "WrongPassword", "AnotherPassword789!"
+        )
+        
+        self.assertFalse(success)
+        
+        # Test with non-existent user
+        success, message = auth_service.update_password(
+            'non-existent-id', self.test_password, new_password
+        )
+        
+        self.assertFalse(success)
 
 
 if __name__ == '__main__':

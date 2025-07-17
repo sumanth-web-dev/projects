@@ -1,11 +1,13 @@
 """
 API routes for the Job Application Agent.
 """
+import datetime
 from flask import jsonify, request, current_app, session, g
 from api import api_bp
 from models.database import db
 from services.auth_service import auth_service
-from api.auth import login_required, api_key_required, auth_required
+from api.auth import login_required, api_key_required, auth_required, role_required
+from api.csrf import csrf_token_required, get_csrf_token
 
 
 @api_bp.route('/health', methods=['GET'])
@@ -106,10 +108,14 @@ def login():
         # Create session
         auth_service.create_session(user_data['id'])
         
+        # Get CSRF token for client
+        csrf_token = session.get('csrf_token')
+        
         return jsonify({
             'status': 'success',
             'message': 'Login successful',
-            'user': user_data
+            'user': user_data,
+            'csrf_token': csrf_token
         })
     else:
         return jsonify({
@@ -118,8 +124,26 @@ def login():
         }), 401
 
 
+@api_bp.route('/auth/csrf-token', methods=['GET'])
+@login_required
+def get_csrf_token_endpoint():
+    """Get CSRF token for the current session."""
+    try:
+        csrf_token = get_csrf_token()
+        return jsonify({
+            'status': 'success',
+            'csrf_token': csrf_token
+        })
+    except RuntimeError as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
+
 @api_bp.route('/auth/logout', methods=['POST'])
 @login_required
+@csrf_token_required
 def logout():
     """End the current user session."""
     auth_service.end_session()
@@ -132,6 +156,7 @@ def logout():
 
 @api_bp.route('/auth/api-key', methods=['POST', 'DELETE'])
 @login_required
+@csrf_token_required
 def api_key_management():
     """Generate or revoke API keys."""
     user_id = g.user_id
@@ -140,8 +165,17 @@ def api_key_management():
         # Generate new API key
         data = request.get_json() or {}
         description = data.get('description', 'API Key')
+        permissions = data.get('permissions', [])
+        expires_days = data.get('expires_days')
         
-        success, api_key, message = auth_service.generate_api_key(user_id, description)
+        # Set expiration date if provided
+        expires_at = None
+        if expires_days is not None:
+            expires_at = datetime.datetime.utcnow() + datetime.timedelta(days=expires_days)
+        
+        success, api_key, message = auth_service.generate_api_key(
+            user_id, description, permissions, expires_at
+        )
         
         if success:
             return jsonify({
@@ -186,6 +220,18 @@ def profile():
     """Profile management endpoints."""
     user_id = g.user_id
     
+    # Apply CSRF protection for state-changing methods
+    if request.method in ['POST', 'PUT', 'DELETE'] and g.auth_method == 'session':
+        csrf_token = session.get('csrf_token')
+        token_header = request.headers.get('X-CSRF-Token')
+        token_json = request.json.get('csrf_token') if request.is_json else None
+        
+        if not csrf_token or (token_header != csrf_token and token_json != csrf_token):
+            return jsonify({
+                'status': 'error',
+                'message': 'CSRF token validation failed'
+            }), 403
+    
     if request.method == 'GET':
         return jsonify({
             'status': 'success',
@@ -229,6 +275,18 @@ def applications():
     """Application tracking endpoints."""
     user_id = g.user_id
     
+    # Apply CSRF protection for POST method with session authentication
+    if request.method == 'POST' and g.auth_method == 'session':
+        csrf_token = session.get('csrf_token')
+        token_header = request.headers.get('X-CSRF-Token')
+        token_json = request.json.get('csrf_token') if request.is_json else None
+        
+        if not csrf_token or (token_header != csrf_token and token_json != csrf_token):
+            return jsonify({
+                'status': 'error',
+                'message': 'CSRF token validation failed'
+            }), 403
+    
     if request.method == 'GET':
         return jsonify({
             'status': 'success',
@@ -268,6 +326,18 @@ def automation():
 def config():
     """System configuration endpoints."""
     user_id = g.user_id
+    
+    # Apply CSRF protection for PUT method with session authentication
+    if request.method == 'PUT' and g.auth_method == 'session':
+        csrf_token = session.get('csrf_token')
+        token_header = request.headers.get('X-CSRF-Token')
+        token_json = request.json.get('csrf_token') if request.is_json else None
+        
+        if not csrf_token or (token_header != csrf_token and token_json != csrf_token):
+            return jsonify({
+                'status': 'error',
+                'message': 'CSRF token validation failed'
+            }), 403
     
     if request.method == 'GET':
         return jsonify({

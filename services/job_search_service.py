@@ -12,7 +12,6 @@ from sqlalchemy import or_, and_, func
 from sqlalchemy.exc import SQLAlchemyError
 from models.database import db
 from models.job import Job
-from models.user import User
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -109,6 +108,15 @@ class JobSearchService:
         Args:
             jobs: List of jobs to filter
             preferences: User preferences dictionary
+                - job_titles: List[str] - Preferred job titles
+                - locations: List[str] - Preferred locations
+                - remote_only: bool - Whether to only include remote jobs
+                - salary_min: float - Minimum acceptable salary
+                - salary_max: float - Maximum acceptable salary
+                - job_types: List[str] - Preferred job types (full-time, part-time, etc.)
+                - experience_levels: List[str] - Preferred experience levels
+                - excluded_companies: List[str] - Companies to exclude
+                - excluded_keywords: List[str] - Keywords to exclude from job title/description
                 
         Returns:
             List[Job]: Filtered list of jobs
@@ -119,6 +127,30 @@ class JobSearchService:
         filtered_jobs = []
         
         for job in jobs:
+            # Skip inactive jobs
+            if not job.is_active:
+                continue
+                
+            # Skip expired jobs if preference is set
+            if preferences.get('exclude_expired', True) and job.is_expired():
+                continue
+                
+            # Check for excluded companies
+            if 'excluded_companies' in preferences and job.company:
+                company_lower = job.company.lower()
+                if any(company.lower() in company_lower for company in preferences['excluded_companies']):
+                    continue
+            
+            # Check for excluded keywords
+            if 'excluded_keywords' in preferences and (job.title or job.description):
+                title_lower = job.title.lower() if job.title else ""
+                desc_lower = job.description.lower() if job.description else ""
+                combined_text = f"{title_lower} {desc_lower}"
+                
+                if any(keyword.lower() in combined_text for keyword in preferences['excluded_keywords']):
+                    continue
+            
+            # Use the job's built-in criteria matching for other filters
             if job.matches_criteria(preferences):
                 filtered_jobs.append(job)
         
@@ -127,37 +159,218 @@ class JobSearchService:
     def detect_duplicates(self, jobs: List[Job]) -> List[Job]:
         """Detect and consolidate duplicate job listings.
         
+        This algorithm identifies duplicate job listings based on multiple criteria:
+        1. Exact URL matches (highest confidence)
+        2. Company + title matches (high confidence)
+        3. Company + location + similar title (medium confidence)
+        
+        When duplicates are found, the algorithm keeps the job with the most complete information.
+        
         Args:
             jobs: List of jobs to check for duplicates
                 
         Returns:
             List[Job]: Deduplicated list of jobs
         """
-        # Use a dictionary to track unique jobs
-        unique_jobs = {}
-        
-        for job in jobs:
-            # Create a key based on company and title (normalized)
-            key = f"{job.company.lower()}:{job.title.lower()}"
+        if not jobs:
+            return []
             
-            # If we haven't seen this job before, add it
-            if key not in unique_jobs:
-                unique_jobs[key] = job
-            else:
-                # If we have seen it, keep the one with more information
-                existing_job = unique_jobs[key]
+        # First pass: Group by URL (highest confidence match)
+        url_groups = {}
+        for job in jobs:
+            if job.source_url:
+                url_key = job.source_url.lower()
+                if url_key not in url_groups:
+                    url_groups[url_key] = []
+                url_groups[url_key].append(job)
+        
+        # Second pass: Group by company + title (high confidence match)
+        company_title_groups = {}
+        for job in jobs:
+            if job.company and job.title:
+                # Normalize company and title
+                company = job.company.lower().strip()
+                title = job.title.lower().strip()
+                key = f"{company}:{title}"
                 
-                # Prefer jobs with descriptions
-                if not existing_job.description and job.description:
-                    unique_jobs[key] = job
-                # Prefer jobs with salary information
-                elif not existing_job.salary_range and job.salary_range:
-                    unique_jobs[key] = job
-                # Prefer more recently discovered jobs
-                elif job.discovered_at > existing_job.discovered_at:
-                    unique_jobs[key] = job
+                if key not in company_title_groups:
+                    company_title_groups[key] = []
+                company_title_groups[key].append(job)
+        
+        # Third pass: Group by company + location + similar title (medium confidence)
+        company_location_groups = {}
+        for job in jobs:
+            if job.company and job.location:
+                # Normalize company and location
+                company = job.company.lower().strip()
+                location = job.location.lower().strip()
+                key = f"{company}:{location}"
+                
+                if key not in company_location_groups:
+                    company_location_groups[key] = []
+                company_location_groups[key].append(job)
+        
+        # Consolidate duplicates, prioritizing jobs with more information
+        unique_jobs = {}
+        processed_ids = set()
+        
+        # Process URL groups first (highest confidence)
+        for url_group in url_groups.values():
+            if len(url_group) > 1:
+                best_job = self._select_best_job(url_group)
+                unique_jobs[best_job.id] = best_job
+                processed_ids.update(job.id for job in url_group)
+            else:
+                job = url_group[0]
+                unique_jobs[job.id] = job
+                processed_ids.add(job.id)
+        
+        # Process company+title groups next
+        for group in company_title_groups.values():
+            # Filter out already processed jobs
+            unprocessed = [job for job in group if job.id not in processed_ids]
+            if len(unprocessed) > 1:
+                best_job = self._select_best_job(unprocessed)
+                unique_jobs[best_job.id] = best_job
+                processed_ids.update(job.id for job in unprocessed)
+            elif len(unprocessed) == 1:
+                job = unprocessed[0]
+                unique_jobs[job.id] = job
+                processed_ids.add(job.id)
+        
+        # Process company+location groups last (lowest confidence)
+        for group in company_location_groups.values():
+            # Filter out already processed jobs
+            unprocessed = [job for job in group if job.id not in processed_ids]
+            if len(unprocessed) > 1:
+                # For this lower confidence match, only consider them duplicates if titles are similar
+                title_groups = self._group_by_similar_titles(unprocessed)
+                for title_group in title_groups:
+                    if len(title_group) > 1:
+                        best_job = self._select_best_job(title_group)
+                        unique_jobs[best_job.id] = best_job
+                        processed_ids.update(job.id for job in title_group)
+                    elif len(title_group) == 1:
+                        job = title_group[0]
+                        unique_jobs[job.id] = job
+                        processed_ids.add(job.id)
+            elif len(unprocessed) == 1:
+                job = unprocessed[0]
+                unique_jobs[job.id] = job
+                processed_ids.add(job.id)
+        
+        # Add any remaining jobs that weren't processed
+        for job in jobs:
+            if job.id not in processed_ids:
+                unique_jobs[job.id] = job
         
         return list(unique_jobs.values())
+    
+    def _select_best_job(self, jobs: List[Job]) -> Job:
+        """Select the best job from a list of potential duplicates.
+        
+        Args:
+            jobs: List of potential duplicate jobs
+                
+        Returns:
+            Job: The job with the most complete information
+        """
+        if not jobs:
+            raise ValueError("Cannot select best job from empty list")
+        
+        if len(jobs) == 1:
+            return jobs[0]
+        
+        # Start with the most recently discovered job
+        best_job = max(jobs, key=lambda j: j.discovered_at)
+        
+        # Score each job based on completeness of information
+        job_scores = {}
+        for job in jobs:
+            score = 0
+            
+            # Prefer jobs with descriptions
+            if job.description:
+                score += 10
+                # Longer descriptions are likely more informative
+                score += min(10, len(job.description) // 100)
+            
+            # Prefer jobs with salary information
+            if job.salary_range:
+                score += 8
+            
+            # Prefer jobs with requirements
+            if job.requirements:
+                score += len(job.requirements) * 2
+            
+            # Prefer jobs with posted_date over just discovered_at
+            if job.posted_date:
+                score += 5
+            
+            # Prefer jobs with more complete metadata
+            if job.job_type:
+                score += 2
+            if job.experience_level:
+                score += 2
+            if job.remote_option:
+                score += 2
+            
+            job_scores[job.id] = score
+        
+        # Find the job with the highest score
+        highest_score = max(job_scores.values())
+        best_jobs = [job for job in jobs if job_scores[job.id] == highest_score]
+        
+        # If multiple jobs have the same score, prefer the most recently discovered one
+        if len(best_jobs) > 1:
+            return max(best_jobs, key=lambda j: j.discovered_at)
+        
+        return best_jobs[0]
+    
+    def _group_by_similar_titles(self, jobs: List[Job]) -> List[List[Job]]:
+        """Group jobs by similar titles.
+        
+        Args:
+            jobs: List of jobs to group
+                
+        Returns:
+            List[List[Job]]: List of job groups with similar titles
+        """
+        if not jobs:
+            return []
+        
+        # Simple implementation using word overlap
+        groups = []
+        processed = set()
+        
+        for i, job1 in enumerate(jobs):
+            if job1.id in processed:
+                continue
+                
+            group = [job1]
+            processed.add(job1.id)
+            
+            # Get words from the title
+            title1_words = set(job1.title.lower().split())
+            
+            for j, job2 in enumerate(jobs[i+1:], i+1):
+                if job2.id in processed:
+                    continue
+                    
+                # Get words from the title
+                title2_words = set(job2.title.lower().split())
+                
+                # Calculate word overlap
+                common_words = title1_words.intersection(title2_words)
+                
+                # If there's significant overlap, consider them similar
+                if len(common_words) >= 2 and (len(common_words) / max(len(title1_words), len(title2_words))) > 0.5:
+                    group.append(job2)
+                    processed.add(job2.id)
+            
+            groups.append(group)
+        
+        return groups
     
     def get_job_by_id(self, job_id: str) -> Optional[Job]:
         """Get a job by ID.
