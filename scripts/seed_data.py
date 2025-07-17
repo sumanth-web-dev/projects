@@ -18,6 +18,7 @@ from models.database import init_db, db
 from models.user import User
 from models.job import Job
 from models.application import Application, ApplicationStatus
+from services.encryption_service import encryption_service
 
 
 def create_app_for_seeding(config_name='development'):
@@ -36,6 +37,9 @@ def create_app_for_seeding(config_name='development'):
     
     # Initialize database
     init_db(app)
+    
+    # Initialize encryption service
+    encryption_service.init_app(app)
     
     return app
 

@@ -80,20 +80,31 @@
 
 
 
+
+
   - Write database schema creation scripts
   - Create sample data for testing
   - Implement database reset functionality for development
   - _Requirements: 1.2, 2.4, 4.1_
 
-- [ ] 3. Implement security and encryption services
-- [ ] 3.1 Create encryption service for sensitive data
+- [-] 3. Implement security and encryption services
+
+
+- [x] 3.1 Create encryption service for sensitive data
+
+
+
+
   - Implement AES-256 encryption for user credentials and personal data
   - Create secure key management system using environment variables
   - Write encryption/decryption utility functions
   - Add unit tests for encryption functionality
   - _Requirements: 5.2, 6.1, 6.3_
 
-- [ ] 3.2 Implement authentication and session management
+- [-] 3.2 Implement authentication and session management
+
+
+
   - Create user authentication system with secure password hashing
   - Implement session management for web interface
   - Add API key authentication for automation processes

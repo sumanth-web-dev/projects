@@ -8,8 +8,7 @@ from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.hybrid import hybrid_property
 from models.database import db
-from cryptography.fernet import Fernet
-import os
+from services.encryption_service import encryption_service
 import re
 
 
@@ -78,57 +77,24 @@ class User(db.Model):
         
         return user_id
     
-    def get_encryption_key(self) -> bytes:
-        """Get or generate encryption key for this user."""
-        key = os.environ.get('ENCRYPTION_KEY')
-        if not key:
-            raise ValueError("ENCRYPTION_KEY environment variable not set")
-        
-        # Use the first 32 bytes of the key for Fernet
-        return key.encode()[:32]
-    
-    def encrypt_data(self, data: Dict) -> str:
-        """Encrypt sensitive user data."""
-        if not data:
-            return ""
-        
-        try:
-            key = Fernet.generate_key()  # Generate a new key for each user
-            cipher_suite = Fernet(key)
-            json_data = json.dumps(data)
-            encrypted_data = cipher_suite.encrypt(json_data.encode())
-            
-            # Store both key and data (in production, key should be stored separately)
-            return f"{key.decode()}:{encrypted_data.decode()}"
-        except Exception as e:
-            raise ValueError(f"Failed to encrypt data: {str(e)}")
-    
-    def decrypt_data(self, encrypted_data: str) -> Dict:
-        """Decrypt sensitive user data."""
-        if not encrypted_data:
-            return {}
-        
-        try:
-            key_str, data_str = encrypted_data.split(':', 1)
-            key = key_str.encode()
-            cipher_suite = Fernet(key)
-            decrypted_data = cipher_suite.decrypt(data_str.encode())
-            return json.loads(decrypted_data.decode())
-        except Exception as e:
-            raise ValueError(f"Failed to decrypt data: {str(e)}")
+    # Encryption methods are now handled by the encryption_service
     
     @hybrid_property
     def personal_data(self) -> Dict:
         """Get decrypted personal data."""
         if not self.encrypted_personal_data:
             return {}
-        return self.decrypt_data(self.encrypted_personal_data)
+        try:
+            return encryption_service.decrypt(self.encrypted_personal_data, self.id)
+        except ValueError:
+            # Log error and return empty dict if decryption fails
+            return {}
     
     @personal_data.setter
     def personal_data(self, data: Dict):
         """Set encrypted personal data."""
         if data:
-            self.encrypted_personal_data = self.encrypt_data(data)
+            self.encrypted_personal_data = encryption_service.encrypt(data, self.id)
         else:
             self.encrypted_personal_data = None
     
