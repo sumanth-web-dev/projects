@@ -1,469 +1,342 @@
 """
-Job search and management API routes.
-
-This module provides API endpoints for searching, filtering, and managing job listings.
+Job routes for job listings and applications in the Job Application Agent.
 """
-from flask import jsonify, request, g
-from api import api_bp
+import uuid
+from datetime import datetime
+from flask import Blueprint, request, jsonify, render_template, session, flash, redirect, url_for, g
+from services.auth_service import auth_service
+from services.notification_service import notification_service
 from services.job_search_service import job_search_service
-from api.auth import auth_required
-from api.csrf import csrf_token_required
+from services.recommendation_service import recommendation_service
+from services.resume_parser_service import resume_parser_service
+from api.security_middleware import validate_json_schema, sanitize_inputs, check_content_type, require_auth
+from models.user import User
+from models.job import Job, JobCategory, JobSkill
+from models.application import Application, ApplicationStatus
 from models.database import db
 
+# Create blueprint for job routes
+job_bp = Blueprint('job', __name__, url_prefix='/jobs')
 
-@api_bp.route('/jobs', methods=['GET'])
-@auth_required
-def get_jobs():
-    """Get job listings with filtering and pagination."""
-    user_id = g.user_id
-    
-    # Extract query parameters
-    criteria = {
+@job_bp.route('/', methods=['GET'])
+def list_jobs():
+    """List job listings with search and filtering."""
+    # Get search parameters from request
+    query_params = {
         'keywords': request.args.get('keywords', ''),
-        'locations': request.args.get('locations', ''),
-        'job_types': request.args.get('job_types', ''),
-        'experience_levels': request.args.get('experience_levels', ''),
-        'remote_options': request.args.get('remote_options', ''),
-        'sources': request.args.get('sources', ''),
-        'sort_by': request.args.get('sort_by', 'date'),  # date or relevance
-        'limit': request.args.get('limit', 50),
-        'offset': request.args.get('offset', 0)
+        'location': request.args.get('location', ''),
+        'category_id': request.args.get('category_id'),
+        'min_salary': request.args.get('min_salary', type=float),
+        'max_salary': request.args.get('max_salary', type=float),
+        'experience_level': request.args.get('experience_level', type=int),
+        'job_type': request.args.get('job_type'),
+        'remote_option': request.args.get('remote_option', type=bool),
+        'skills': request.args.getlist('skills'),
+        'company': request.args.get('company', ''),
+        'page': request.args.get('page', 1, type=int),
+        'limit': request.args.get('limit', 20, type=int),
+        'sort_by': request.args.get('sort_by', 'created_at'),
+        'sort_order': request.args.get('sort_order', 'desc')
     }
     
-    # Add optional filters if provided
-    if 'salary_min' in request.args:
-        criteria['salary_min'] = request.args.get('salary_min')
-    if 'salary_max' in request.args:
-        criteria['salary_max'] = request.args.get('salary_max')
-    if 'days_old' in request.args:
-        criteria['days_old'] = request.args.get('days_old')
+    # Search jobs
+    search_results = job_search_service.search_jobs(query_params)
     
-    # Convert comma-separated values to lists
-    for key in ['keywords', 'locations', 'job_types', 'experience_levels', 'remote_options', 'sources']:
-        if criteria[key] and isinstance(criteria[key], str) and ',' in criteria[key]:
-            criteria[key] = [item.strip() for item in criteria[key].split(',')]
+    # Get categories for filtering
+    categories = job_search_service.get_job_categories()
     
-    # Search for jobs
-    success, jobs, message = job_search_service.search_jobs(criteria)
+    # Get job types for filtering
+    job_types = job_search_service.get_job_types()
     
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 400
+    # Get popular skills for filtering
+    popular_skills = job_search_service.get_popular_skills()
     
-    # Convert jobs to dictionaries
-    job_dicts = [job.to_dict(include_description=False) for job in jobs]
+    # Check if user is logged in for personalized recommendations
+    user_id = session.get('user_id')
+    recommended_jobs = []
     
-    return jsonify({
-        'status': 'success',
-        'message': message,
-        'count': len(job_dicts),
-        'jobs': job_dicts
-    })
+    if user_id:
+        # Get personalized job recommendations
+        recommendations = recommendation_service.get_job_recommendations(user_id, limit=5)
+        recommended_jobs = [rec['job'] for rec in recommendations]
+    
+    # Render template with results
+    return render_template('jobs/list.html',
+                          jobs=search_results['jobs'],
+                          metadata=search_results['metadata'],
+                          query_params=query_params,
+                          categories=categories,
+                          job_types=job_types,
+                          popular_skills=popular_skills,
+                          recommended_jobs=recommended_jobs)
 
-
-@api_bp.route('/jobs/<job_id>', methods=['GET'])
-@auth_required
-def get_job_details(job_id):
-    """Get detailed information about a specific job."""
-    user_id = g.user_id
-    
-    job = job_search_service.get_job_by_id(job_id)
+@job_bp.route('/<job_id>', methods=['GET'])
+def view_job(job_id):
+    """View a specific job listing."""
+    # Get job details
+    job = Job.query.get(job_id)
     
     if not job:
-        return jsonify({
-            'status': 'error',
-            'message': 'Job not found'
-        }), 404
+        flash('Job not found', 'error')
+        return redirect(url_for('job.list_jobs'))
     
-    # Get similar jobs
-    similar_jobs = job_search_service.get_similar_jobs(job_id, limit=5)
-    similar_job_dicts = [j.to_dict(include_description=False) for j in similar_jobs]
+    # Check if user is logged in
+    user_id = session.get('user_id')
+    user = None
+    has_applied = False
+    similar_jobs = []
     
-    return jsonify({
-        'status': 'success',
-        'job': job.to_dict(include_description=True),
-        'similar_jobs': similar_job_dicts
-    })
+    if user_id:
+        # Get user details
+        user = User.query.get(user_id)
+        
+        # Check if user has already applied
+        application = Application.query.filter_by(
+            user_id=user_id,
+            job_id=job_id
+        ).first()
+        
+        has_applied = application is not None
+        
+        # Get similar jobs
+        similar_jobs_data = recommendation_service.get_similar_jobs(job_id)
+        similar_jobs = [item['job'] for item in similar_jobs_data]
+    
+    # Render template with job details
+    return render_template('jobs/view.html',
+                          job=job,
+                          user=user,
+                          has_applied=has_applied,
+                          similar_jobs=similar_jobs)
 
-
-@api_bp.route('/jobs', methods=['POST'])
-@auth_required
-@csrf_token_required
-def create_job():
-    """Create a new job listing."""
-    user_id = g.user_id
-    data = request.get_json()
+@job_bp.route('/<job_id>/apply', methods=['GET', 'POST'])
+@require_auth
+def apply_job(job_id):
+    """Apply for a job."""
+    # Get job details
+    job = Job.query.get(job_id)
     
-    if not data:
-        return jsonify({
-            'status': 'error',
-            'message': 'No data provided'
-        }), 400
-    
-    # Validate required fields
-    required_fields = ['title', 'company', 'source_website', 'source_url']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({
-                'status': 'error',
-                'message': f'Missing required field: {field}'
-            }), 400
-    
-    # Save job
-    success, job, message = job_search_service.save_job(data)
-    
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 400
-    
-    return jsonify({
-        'status': 'success',
-        'message': message,
-        'job': job.to_dict()
-    }), 201
-
-
-@api_bp.route('/jobs/<job_id>', methods=['PUT'])
-@auth_required
-@csrf_token_required
-def update_job(job_id):
-    """Update an existing job listing."""
-    user_id = g.user_id
-    data = request.get_json()
-    
-    if not data:
-        return jsonify({
-            'status': 'error',
-            'message': 'No data provided'
-        }), 400
-    
-    # Check if job exists
-    job = job_search_service.get_job_by_id(job_id)
     if not job:
-        return jsonify({
-            'status': 'error',
-            'message': 'Job not found'
-        }), 404
+        flash('Job not found', 'error')
+        return redirect(url_for('job.list_jobs'))
     
-    # Update job data
-    data['id'] = job_id  # Ensure ID is preserved
-    success, updated_job, message = job_search_service.save_job(data)
+    # Get user details
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
     
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 400
+    if not user:
+        flash('User not found', 'error')
+        return redirect(url_for('auth.logout'))
     
-    return jsonify({
-        'status': 'success',
-        'message': message,
-        'job': updated_job.to_dict()
-    })
+    # Check if user has already applied
+    existing_application = Application.query.filter_by(
+        user_id=user_id,
+        job_id=job_id
+    ).first()
+    
+    if existing_application:
+        flash('You have already applied for this job', 'info')
+        return redirect(url_for('job.view_job', job_id=job_id))
+    
+    if request.method == 'POST':
+        try:
+            # Get form data
+            cover_letter = request.form.get('cover_letter', '')
+            
+            # Check if resume was uploaded
+            resume_path = None
+            if 'resume' in request.files:
+                resume_file = request.files['resume']
+                if resume_file.filename:
+                    # Save resume
+                    resume_path = resume_parser_service.save_resume(resume_file, user_id)
+                    
+                    if not resume_path:
+                        flash('Error uploading resume. Please try again.', 'error')
+                        return render_template('jobs/apply.html', job=job, user=user)
+            
+            # Create application
+            application_id = str(uuid.uuid4())
+            application = Application(
+                id=application_id,
+                user_id=user_id,
+                job_id=job_id,
+                cover_letter=cover_letter,
+                resume_path=resume_path,
+                status=ApplicationStatus.SUBMITTED,
+                submitted_at=datetime.utcnow()
+            )
+            
+            # Save to database
+            db.session.add(application)
+            db.session.commit()
+            
+            # Notify HR about new application
+            notification_service.create_notification(
+                user_id=job.created_by,
+                title=f"New Application: {job.title}",
+                message=f"A new application has been submitted for {job.title} by {user.email}.",
+                notification_type="new_application",
+                related_entity_id=application_id
+            )
+            
+            flash('Application submitted successfully', 'success')
+            return redirect(url_for('job.my_applications'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error submitting application: {str(e)}', 'error')
+    
+    # GET request - show application form
+    return render_template('jobs/apply.html', job=job, user=user)
 
+@job_bp.route('/my-applications', methods=['GET'])
+@require_auth
+def my_applications():
+    """View user's job applications."""
+    # Get user details
+    user_id = session.get('user_id')
+    
+    # Get user's applications
+    applications = Application.query.filter_by(user_id=user_id).order_by(
+        Application.submitted_at.desc()
+    ).all()
+    
+    # Render template with applications
+    return render_template('jobs/my_applications.html', applications=applications)
 
-@api_bp.route('/jobs/<job_id>', methods=['DELETE'])
-@auth_required
-@csrf_token_required
-def delete_job(job_id):
-    """Mark a job as inactive (soft delete)."""
-    user_id = g.user_id
+@job_bp.route('/applications/<application_id>', methods=['GET'])
+@require_auth
+def view_application(application_id):
+    """View a specific application."""
+    # Get user details
+    user_id = session.get('user_id')
     
-    # Check if job exists
-    job = job_search_service.get_job_by_id(job_id)
-    if not job:
-        return jsonify({
-            'status': 'error',
-            'message': 'Job not found'
-        }), 404
+    # Get application details
+    application = Application.query.get(application_id)
     
-    # Mark job as inactive
-    success, message = job_search_service.mark_job_inactive(job_id)
+    if not application or application.user_id != user_id:
+        flash('Application not found', 'error')
+        return redirect(url_for('job.my_applications'))
     
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 400
+    # Get job details
+    job = application.job
     
-    return jsonify({
-        'status': 'success',
-        'message': message
-    })
+    # Render template with application details
+    return render_template('jobs/view_application.html',
+                          application=application,
+                          job=job)
 
-
-@api_bp.route('/search', methods=['POST'])
-@auth_required
-@csrf_token_required
-def trigger_job_search():
-    """Trigger a job search across configured platforms."""
-    user_id = g.user_id
-    data = request.get_json() or {}
+@job_bp.route('/applications/<application_id>/withdraw', methods=['POST'])
+@require_auth
+def withdraw_application(application_id):
+    """Withdraw a job application."""
+    # Get user details
+    user_id = session.get('user_id')
     
-    # Extract search criteria
-    criteria = {
-        'keywords': data.get('keywords', []),
-        'locations': data.get('locations', []),
-        'job_types': data.get('job_types', []),
-        'experience_levels': data.get('experience_levels', []),
-        'remote_options': data.get('remote_options', []),
-        'salary_min': data.get('salary_min'),
-        'salary_max': data.get('salary_max'),
-        'sources': data.get('sources', []),
-        'days_old': data.get('days_old', 30)
-    }
+    # Get application details
+    application = Application.query.get(application_id)
     
-    # Get user preferences for filtering
-    preferences = data.get('preferences', {})
-    
-    # Validate sources
-    valid_sources = ['linkedin', 'indeed', 'glassdoor', 'monster', 'ziprecruiter', 'other']
-    if criteria['sources']:
-        invalid_sources = [s for s in criteria['sources'] if s.lower() not in valid_sources]
-        if invalid_sources:
-            return jsonify({
-                'status': 'error',
-                'message': f"Invalid sources: {', '.join(invalid_sources)}. Valid sources are: {', '.join(valid_sources)}"
-            }), 400
-    
-    # Import job search service here to avoid circular imports
-    from services.job_search_service import job_search_service
-    
-    # Trigger the search process
-    success, search_id, message = job_search_service.trigger_search(user_id, criteria, preferences)
-    
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 400
-    
-    return jsonify({
-        'status': 'success',
-        'message': message,
-        'search_id': search_id,
-        'criteria': criteria
-    })
-
-
-@api_bp.route('/jobs/filter', methods=['POST'])
-@auth_required
-def filter_jobs():
-    """Filter jobs based on user preferences."""
-    user_id = g.user_id
-    data = request.get_json() or {}
-    
-    # Extract job IDs to filter
-    job_ids = data.get('job_ids', [])
-    if not job_ids:
-        return jsonify({
-            'status': 'error',
-            'message': 'No job IDs provided'
-        }), 400
-    
-    # Extract preferences
-    preferences = data.get('preferences', {})
-    
-    # Get jobs by IDs
-    jobs = []
-    for job_id in job_ids:
-        job = job_search_service.get_job_by_id(job_id)
-        if job:
-            jobs.append(job)
-    
-    # Apply filtering
-    filtered_jobs = job_search_service.filter_jobs(jobs, preferences)
-    
-    # Convert to dictionaries
-    job_dicts = [job.to_dict(include_description=False) for job in filtered_jobs]
-    
-    return jsonify({
-        'status': 'success',
-        'count': len(job_dicts),
-        'jobs': job_dicts
-    })
-@api_bp.route('/search/<search_id>', methods=['GET'])
-@auth_required
-def get_search_status(search_id):
-    """Get the status of a job search."""
-    user_id = g.user_id
-    
-    # Get search status
-    success, status_data, message = job_search_service.get_search_status(search_id)
-    
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 404
-    
-    # Check if search belongs to user
-    if status_data.get('user_id') != user_id:
-        return jsonify({
-            'status': 'error',
-            'message': 'Search not found'
-        }), 404
-    
-    return jsonify({
-        'status': 'success',
-        'search': status_data
-    })
-
-
-@api_bp.route('/search/<search_id>/results', methods=['GET'])
-@auth_required
-def get_search_results(search_id):
-    """Get the results of a completed job search."""
-    user_id = g.user_id
-    
-    # Extract pagination parameters
-    limit = request.args.get('limit', 50, type=int)
-    offset = request.args.get('offset', 0, type=int)
-    
-    # Get search results
-    success, jobs, message = job_search_service.get_search_results(search_id, limit, offset)
-    
-    if not success:
-        return jsonify({
-            'status': 'error',
-            'message': message
-        }), 404
-    
-    # Convert jobs to dictionaries
-    job_dicts = [job.to_dict(include_description=False) for job in jobs]
-    
-    return jsonify({
-        'status': 'success',
-        'count': len(job_dicts),
-        'jobs': job_dicts,
-        'message': message
-    })
-
-
-@api_bp.route('/jobs/sort', methods=['POST'])
-@auth_required
-def sort_jobs():
-    """Sort jobs based on specified criteria."""
-    user_id = g.user_id
-    data = request.get_json() or {}
-    
-    # Extract job IDs to sort
-    job_ids = data.get('job_ids', [])
-    if not job_ids:
-        return jsonify({
-            'status': 'error',
-            'message': 'No job IDs provided'
-        }), 400
-    
-    # Extract sort parameters
-    sort_by = data.get('sort_by', 'date')  # date, relevance, company, title
-    sort_order = data.get('sort_order', 'desc')  # asc, desc
-    
-    # Get jobs by IDs
-    jobs = []
-    for job_id in job_ids:
-        job = job_search_service.get_job_by_id(job_id)
-        if job:
-            jobs.append(job)
-    
-    # Sort jobs
-    if sort_by == 'date':
-        jobs.sort(key=lambda j: j.discovered_at or datetime.datetime.min, 
-                  reverse=(sort_order == 'desc'))
-    elif sort_by == 'company':
-        jobs.sort(key=lambda j: j.company.lower() if j.company else '', 
-                  reverse=(sort_order == 'desc'))
-    elif sort_by == 'title':
-        jobs.sort(key=lambda j: j.title.lower() if j.title else '', 
-                  reverse=(sort_order == 'desc'))
-    elif sort_by == 'salary':
-        # Sort by maximum salary if available, otherwise minimum
-        jobs.sort(key=lambda j: (j.salary_max or j.salary_min or 0), 
-                  reverse=(sort_order == 'desc'))
-    
-    # Convert to dictionaries
-    job_dicts = [job.to_dict(include_description=False) for job in jobs]
-    
-    return jsonify({
-        'status': 'success',
-        'count': len(job_dicts),
-        'jobs': job_dicts
-    })
-
-
-@api_bp.route('/jobs/stats', methods=['GET'])
-@auth_required
-def get_job_stats():
-    """Get statistics about job listings."""
-    user_id = g.user_id
+    if not application or application.user_id != user_id:
+        flash('Application not found', 'error')
+        return redirect(url_for('job.my_applications'))
     
     try:
-        # Get total job count
-        total_jobs = db.session.query(db.func.count(Job.id)).filter(Job.is_active == True).scalar() or 0
+        # Update application status
+        application.status = ApplicationStatus.WITHDRAWN
+        application.last_updated_at = datetime.utcnow()
+        db.session.commit()
         
-        # Get jobs by source website
-        jobs_by_source = db.session.query(
-            Job.source_website, 
-            db.func.count(Job.id)
-        ).filter(
-            Job.is_active == True
-        ).group_by(
-            Job.source_website
-        ).all()
+        # Notify HR about withdrawn application
+        notification_service.create_notification(
+            user_id=application.job.created_by,
+            title=f"Application Withdrawn: {application.job.title}",
+            message=f"An application for {application.job.title} has been withdrawn.",
+            notification_type="application_withdrawn",
+            related_entity_id=application_id
+        )
         
-        # Get jobs by job type
-        jobs_by_type = db.session.query(
-            Job.job_type, 
-            db.func.count(Job.id)
-        ).filter(
-            Job.is_active == True,
-            Job.job_type != None
-        ).group_by(
-            Job.job_type
-        ).all()
-        
-        # Get jobs by experience level
-        jobs_by_experience = db.session.query(
-            Job.experience_level, 
-            db.func.count(Job.id)
-        ).filter(
-            Job.is_active == True,
-            Job.experience_level != None
-        ).group_by(
-            Job.experience_level
-        ).all()
-        
-        # Get jobs by remote option
-        jobs_by_remote = db.session.query(
-            Job.remote_option, 
-            db.func.count(Job.id)
-        ).filter(
-            Job.is_active == True,
-            Job.remote_option != None
-        ).group_by(
-            Job.remote_option
-        ).all()
-        
-        # Format results
-        stats = {
-            'total_jobs': total_jobs,
-            'by_source': {source: count for source, count in jobs_by_source},
-            'by_job_type': {job_type: count for job_type, count in jobs_by_type},
-            'by_experience': {exp: count for exp, count in jobs_by_experience},
-            'by_remote_option': {remote: count for remote, count in jobs_by_remote}
-        }
-        
-        return jsonify({
-            'status': 'success',
-            'stats': stats
-        })
-        
+        flash('Application withdrawn successfully', 'success')
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f"Error retrieving job statistics: {str(e)}"
-        }), 500
+        db.session.rollback()
+        flash(f'Error withdrawing application: {str(e)}', 'error')
+    
+    return redirect(url_for('job.my_applications'))
+
+@job_bp.route('/recommended', methods=['GET'])
+@require_auth
+def recommended_jobs():
+    """View personalized job recommendations."""
+    # Get user details
+    user_id = session.get('user_id')
+    
+    # Get job recommendations
+    recommendations = recommendation_service.get_job_recommendations(user_id)
+    
+    # Render template with recommendations
+    return render_template('jobs/recommended.html', recommendations=recommendations)
+
+@job_bp.route('/trending', methods=['GET'])
+def trending_jobs():
+    """View trending job searches and listings."""
+    # Get trending searches
+    trending_searches = job_search_service.get_trending_searches()
+    
+    # Get popular job categories
+    categories = job_search_service.get_job_categories()
+    
+    # Get popular skills
+    popular_skills = job_search_service.get_popular_skills()
+    
+    # Render template with trending data
+    return render_template('jobs/trending.html',
+                          trending_searches=trending_searches,
+                          categories=categories,
+                          popular_skills=popular_skills)
+
+# API endpoints for AJAX requests
+@job_bp.route('/api/search', methods=['GET'])
+def api_search_jobs():
+    """API endpoint for job search."""
+    # Get search parameters from request
+    query_params = {
+        'keywords': request.args.get('keywords', ''),
+        'location': request.args.get('location', ''),
+        'category_id': request.args.get('category_id'),
+        'min_salary': request.args.get('min_salary', type=float),
+        'max_salary': request.args.get('max_salary', type=float),
+        'experience_level': request.args.get('experience_level', type=int),
+        'job_type': request.args.get('job_type'),
+        'remote_option': request.args.get('remote_option', type=bool),
+        'skills': request.args.getlist('skills'),
+        'company': request.args.get('company', ''),
+        'page': request.args.get('page', 1, type=int),
+        'limit': request.args.get('limit', 20, type=int),
+        'sort_by': request.args.get('sort_by', 'created_at'),
+        'sort_order': request.args.get('sort_order', 'desc')
+    }
+    
+    # Search jobs
+    search_results = job_search_service.search_jobs(query_params)
+    
+    # Return JSON response
+    return jsonify(search_results)
+
+@job_bp.route('/api/categories', methods=['GET'])
+def api_get_categories():
+    """API endpoint for job categories."""
+    categories = job_search_service.get_job_categories()
+    return jsonify(categories)
+
+@job_bp.route('/api/job-types', methods=['GET'])
+def api_get_job_types():
+    """API endpoint for job types."""
+    job_types = job_search_service.get_job_types()
+    return jsonify(job_types)
+
+@job_bp.route('/api/popular-skills', methods=['GET'])
+def api_get_popular_skills():
+    """API endpoint for popular skills."""
+    limit = request.args.get('limit', 20, type=int)
+    popular_skills = job_search_service.get_popular_skills(limit=limit)
+    return jsonify(popular_skills)

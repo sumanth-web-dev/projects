@@ -1,0 +1,729 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ campus_drive.title }} - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+{% if session.authenticated %}
+    {% if 'student' in session.roles %}
+        <li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+        <li><a href="{{ url_for('campus_drive.list_drives') }}" class="active"><i class="fas fa-university"></i> Campus Drives</a></li>
+        <li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+    {% elif 'hr' in session.roles %}
+        <li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Manage Jobs</a></li>
+        <li><a href="{{ url_for('hr.campus_drives') }}" class="active"><i class="fas fa-university"></i> Campus Drives</a></li>
+    {% else %}
+        <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+        <li><a href="{{ url_for('campus_drive.list_drives') }}" class="active"><i class="fas fa-university"></i> Campus Drives</a></li>
+    {% endif %}
+{% else %}
+    <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>
+    <li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+    <li><a href="{{ url_for('campus_drive.list_drives') }}" class="active"><i class="fas fa-university"></i> Campus Drives</a></li>
+    <li><a href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+{% endif %}
+{% endblock %}
+
+{% block page_title %}{{ campus_drive.title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('campus_drive.list_drives') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Drives</a>
+
+{% if session.authenticated %}
+    {% if 'student' in session.roles and not is_registered and campus_drive.status == 'scheduled' %}
+        <form action="{{ url_for('campus_drive.register_for_drive', drive_id=campus_drive.id) }}" method="POST" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-clipboard-check"></i> Register</button>
+        </form>
+    {% elif is_registered %}
+        <button class="btn btn-success" disabled><i class="fas fa-check"></i> Registered</button>
+    {% endif %}
+    
+    {% if 'hr' in session.roles and campus_drive.created_by == session.user_id %}
+        <a href="{{ url_for('campus_drive.edit_drive', drive_id=campus_drive.id) }}" class="btn btn-primary"><i class="fas fa-edit"></i> Edit</a>
+        <a href="{{ url_for('campus_drive.view_registrations', drive_id=campus_drive.id) }}" class="btn btn-info"><i class="fas fa-users"></i> View Registrations</a>
+    {% endif %}
+{% else %}
+    <a href="{{ url_for('auth.login') }}?next={{ url_for('campus_drive.view_drive', drive_id=campus_drive.id) }}" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Login to Register</a>
+{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="drive-detail-container">
+    <div class="drive-detail-main">
+        <div class="card">
+            <div class="card-body">
+                <div class="drive-header">
+                    <div class="drive-institution-logo">
+                        <div class="institution-logo-placeholder">
+                            {{ campus_drive.institution.name[0] }}
+                        </div>
+                    </div>
+                    <div class="drive-header-info">
+                        <h1>{{ campus_drive.title }}</h1>
+                        <h2>{{ campus_drive.institution.name }}</h2>
+                        <div class="drive-meta">
+                            <span class="drive-meta-item"><i class="fas fa-calendar-alt"></i> {{ campus_drive.start_date|date }}</span>
+                            {% if campus_drive.end_date %}
+                                <span class="drive-meta-item"><i class="fas fa-calendar-check"></i> {{ campus_drive.end_date|date }}</span>
+                            {% endif %}
+                            <span class="drive-meta-item"><i class="fas fa-map-marker-alt"></i> {{ campus_drive.location or 'Virtual' }}</span>
+                            <span class="drive-meta-item"><i class="fas fa-info-circle"></i> Status: {{ campus_drive.status|title }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="drive-status-badges">
+                    {% if campus_drive.is_virtual %}
+                        <span class="badge badge-info">Virtual</span>
+                    {% endif %}
+                    
+                    {% if campus_drive.status == 'scheduled' %}
+                        <span class="badge badge-primary">Scheduled</span>
+                    {% elif campus_drive.status == 'ongoing' %}
+                        <span class="badge badge-success">Ongoing</span>
+                    {% elif campus_drive.status == 'completed' %}
+                        <span class="badge badge-secondary">Completed</span>
+                    {% elif campus_drive.status == 'cancelled' %}
+                        <span class="badge badge-danger">Cancelled</span>
+                    {% endif %}
+                </div>
+                
+                {% if campus_drive.description %}
+                    <div class="drive-description">
+                        <h3>Description</h3>
+                        <div class="description-content">
+                            {{ campus_drive.description|safe }}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if campus_drive.jobs %}
+                    <div class="drive-jobs">
+                        <h3>Available Positions</h3>
+                        <div class="jobs-list">
+                            {% for job in campus_drive.jobs %}
+                                <div class="job-card">
+                                    <div class="job-card-header">
+                                        <h4><a href="{{ url_for('job.view_job', job_id=job.id) }}">{{ job.title }}</a></h4>
+                                        <div class="job-company">{{ job.company }}</div>
+                                    </div>
+                                    <div class="job-card-body">
+                                        <div class="job-details">
+                                            <div class="job-detail">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                                <span>{{ job.location or 'Remote' }}</span>
+                                            </div>
+                                            {% if job.job_type %}
+                                                <div class="job-detail">
+                                                    <i class="fas fa-briefcase"></i>
+                                                    <span>{{ job.job_type }}</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if job.experience_required is not none %}
+                                                <div class="job-detail">
+                                                    <i class="fas fa-user-clock"></i>
+                                                    <span>{{ job.experience_required }}+ years</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        {% if job.description %}
+                                            <div class="job-description">
+                                                {{ job.description|truncate(100) }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="job-card-footer">
+                                        <a href="{{ url_for('job.view_job', job_id=job.id) }}" class="btn btn-primary btn-sm">View Details</a>
+                                        <a href="{{ url_for('job.apply_job', job_id=job.id) }}" class="btn btn-secondary btn-sm">Apply</a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if is_hr_or_admin %}
+                    <div class="drive-statistics">
+                        <h3>Drive Statistics</h3>
+                        <div class="stats-container">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ statistics.total_registrations|default(0) }}</div>
+                                <div class="stat-label">Total Registrations</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-value">{{ statistics.attended_count|default(0) }}</div>
+                                <div class="stat-label">Attended</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-value">{{ (statistics.attendance_rate * 100)|round|int }}%</div>
+                                <div class="stat-label">Attendance Rate</div>
+                            </div>
+                            
+                            {% if statistics.status_counts %}
+                                <div class="stat-card">
+                                    <div class="stat-value">{{ statistics.status_counts.shortlisted|default(0) }}</div>
+                                    <div class="stat-label">Shortlisted</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="registration-actions">
+                            <a href="{{ url_for('campus_drive.view_registrations', drive_id=campus_drive.id) }}" class="btn btn-primary">View All Registrations</a>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="drive-registration-section">
+                    {% if session.authenticated %}
+                        {% if 'student' in session.roles %}
+                            {% if is_registered %}
+                                <div class="registration-status">
+                                    <div class="registration-icon success">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div class="registration-message">
+                                        <h4>You are registered for this campus drive</h4>
+                                        <p>Check your email for further instructions and updates.</p>
+                                    </div>
+                                </div>
+                            {% elif campus_drive.status == 'scheduled' %}
+                                <div class="registration-cta">
+                                    <h3>Register for this Campus Drive</h3>
+                                    <p>Don't miss this opportunity to connect with potential employers and kickstart your career.</p>
+                                    <form action="{{ url_for('campus_drive.register_for_drive', drive_id=campus_drive.id) }}" method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                                        <button type="submit" class="btn btn-primary btn-lg">Register Now</button>
+                                    </form>
+                                </div>
+                            {% elif campus_drive.status == 'completed' %}
+                                <div class="registration-status">
+                                    <div class="registration-icon info">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="registration-message">
+                                        <h4>This campus drive has been completed</h4>
+                                        <p>Registration is no longer available.</p>
+                                    </div>
+                                </div>
+                            {% elif campus_drive.status == 'cancelled' %}
+                                <div class="registration-status">
+                                    <div class="registration-icon danger">
+                                        <i class="fas fa-times"></i>
+                                    </div>
+                                    <div class="registration-message">
+                                        <h4>This campus drive has been cancelled</h4>
+                                        <p>Registration is no longer available.</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        <div class="registration-cta">
+                            <h3>Register for this Campus Drive</h3>
+                            <p>Please log in to register for this campus drive.</p>
+                            <a href="{{ url_for('auth.login') }}?next={{ url_for('campus_drive.view_drive', drive_id=campus_drive.id) }}" class="btn btn-primary btn-lg">Login to Register</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="drive-detail-sidebar">
+        <div class="card">
+            <div class="card-header">
+                <h3>Drive Details</h3>
+            </div>
+            <div class="card-body">
+                <ul class="drive-details-list">
+                    <li>
+                        <div class="detail-icon"><i class="fas fa-calendar-alt"></i></div>
+                        <div class="detail-info">
+                            <span class="detail-label">Start Date</span>
+                            <span class="detail-value">{{ campus_drive.start_date|date }}</span>
+                        </div>
+                    </li>
+                    
+                    {% if campus_drive.end_date %}
+                        <li>
+                            <div class="detail-icon"><i class="fas fa-calendar-check"></i></div>
+                            <div class="detail-info">
+                                <span class="detail-label">End Date</span>
+                                <span class="detail-value">{{ campus_drive.end_date|date }}</span>
+                            </div>
+                        </li>
+                    {% endif %}
+                    
+                    <li>
+                        <div class="detail-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="detail-info">
+                            <span class="detail-label">Location</span>
+                            <span class="detail-value">{{ campus_drive.location or 'Virtual' }}</span>
+                        </div>
+                    </li>
+                    
+                    <li>
+                        <div class="detail-icon"><i class="fas fa-university"></i></div>
+                        <div class="detail-info">
+                            <span class="detail-label">Institution</span>
+                            <span class="detail-value">{{ campus_drive.institution.name }}</span>
+                        </div>
+                    </li>
+                    
+                    <li>
+                        <div class="detail-icon"><i class="fas fa-briefcase"></i></div>
+                        <div class="detail-info">
+                            <span class="detail-label">Available Positions</span>
+                            <span class="detail-value">{{ campus_drive.jobs|length }}</span>
+                        </div>
+                    </li>
+                    
+                    <li>
+                        <div class="detail-icon"><i class="fas fa-info-circle"></i></div>
+                        <div class="detail-info">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">{{ campus_drive.status|title }}</span>
+                        </div>
+                    </li>
+                    
+                    {% if campus_drive.is_virtual %}
+                        <li>
+                            <div class="detail-icon"><i class="fas fa-laptop"></i></div>
+                            <div class="detail-info">
+                                <span class="detail-label">Drive Type</span>
+                                <span class="detail-value">Virtual</span>
+                            </div>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Institution Information</h3>
+            </div>
+            <div class="card-body">
+                <h4>{{ campus_drive.institution.name }}</h4>
+                
+                {% if campus_drive.institution.location %}
+                    <div class="institution-detail">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>{{ campus_drive.institution.location }}</span>
+                    </div>
+                {% endif %}
+                
+                {% if campus_drive.institution.website %}
+                    <div class="institution-detail">
+                        <i class="fas fa-globe"></i>
+                        <a href="{{ campus_drive.institution.website }}" target="_blank">{{ campus_drive.institution.website }}</a>
+                    </div>
+                {% endif %}
+                
+                {% if campus_drive.institution.description %}
+                    <div class="institution-description">
+                        {{ campus_drive.institution.description|truncate(150) }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Share This Drive</h3>
+            </div>
+            <div class="card-body">
+                <div class="share-buttons">
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ url_for('campus_drive.view_drive', drive_id=campus_drive.id, _external=True) }}" target="_blank" class="share-button linkedin">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    <a href="https://twitter.com/intent/tweet?text=Campus Drive: {{ campus_drive.title }} at {{ campus_drive.institution.name }}&url={{ url_for('campus_drive.view_drive', drive_id=campus_drive.id, _external=True) }}" target="_blank" class="share-button twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('campus_drive.view_drive', drive_id=campus_drive.id, _external=True) }}" target="_blank" class="share-button facebook">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="mailto:?subject=Campus Drive: {{ campus_drive.title }} at {{ campus_drive.institution.name }}&body=Check out this campus drive: {{ url_for('campus_drive.view_drive', drive_id=campus_drive.id, _external=True) }}" class="share-button email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .drive-detail-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .drive-detail-main {
+        flex: 1;
+    }
+    
+    .drive-detail-sidebar {
+        width: 350px;
+        flex-shrink: 0;
+    }
+    
+    .drive-header {
+        display: flex;
+        margin-bottom: 1.5rem;
+    }
+    
+    .drive-institution-logo {
+        width: 80px;
+        height: 80px;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .institution-logo-placeholder {
+        width: 100%;
+        height: 100%;
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+    
+    .drive-header-info h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .drive-header-info h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--gray-color);
+        margin-bottom: 1rem;
+    }
+    
+    .drive-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .drive-meta-item {
+        display: flex;
+        align-items: center;
+        color: var(--gray-color);
+        font-size: 0.9rem;
+    }
+    
+    .drive-meta-item i {
+        margin-right: 0.5rem;
+    }
+    
+    .drive-status-badges {
+        margin-bottom: 1.5rem;
+    }
+    
+    .drive-description {
+        margin-bottom: 2rem;
+    }
+    
+    .drive-description h3,
+    .drive-jobs h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .description-content {
+        line-height: 1.7;
+    }
+    
+    .drive-jobs {
+        margin-bottom: 2rem;
+    }
+    
+    .jobs-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .job-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .job-card-header {
+        margin-bottom: 0.75rem;
+    }
+    
+    .job-card-header h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .job-card-header h4 a {
+        color: var(--dark-color);
+        text-decoration: none;
+    }
+    
+    .job-card-header h4 a:hover {
+        color: var(--primary-color);
+    }
+    
+    .job-company {
+        color: var(--gray-color);
+        font-size: 0.85rem;
+    }
+    
+    .job-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .job-detail {
+        display: flex;
+        align-items: center;
+        color: var(--gray-color);
+        font-size: 0.85rem;
+    }
+    
+    .job-detail i {
+        margin-right: 0.5rem;
+    }
+    
+    .job-description {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .job-card-footer {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .drive-statistics {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .drive-statistics h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .registration-actions {
+        text-align: center;
+    }
+    
+    .drive-registration-section {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .registration-cta {
+        text-align: center;
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .registration-cta h3 {
+        margin-bottom: 1rem;
+    }
+    
+    .registration-cta p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .registration-status {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .registration-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .registration-icon.success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .registration-icon.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .registration-icon.danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .registration-message h4 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .registration-message p {
+        margin-bottom: 0;
+    }
+    
+    .drive-details-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .drive-details-list li {
+        display: flex;
+        margin-bottom: 1rem;
+    }
+    
+    .detail-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #e8f4fd;
+        color: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .detail-info {
+        flex: 1;
+    }
+    
+    .detail-label {
+        display: block;
+        color: var(--gray-color);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-weight: 500;
+    }
+    
+    .institution-detail {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    .institution-detail i {
+        margin-right: 0.75rem;
+        width: 16px;
+    }
+    
+    .institution-description {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .share-buttons {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .share-button {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        transition: transform 0.2s;
+    }
+    
+    .share-button:hover {
+        transform: translateY(-3px);
+    }
+    
+    .share-button.linkedin {
+        background-color: #0077b5;
+    }
+    
+    .share-button.twitter {
+        background-color: #1da1f2;
+    }
+    
+    .share-button.facebook {
+        background-color: #3b5998;
+    }
+    
+    .share-button.email {
+        background-color: #ea4335;
+    }
+    
+    @media (max-width: 992px) {
+        .drive-detail-container {
+            flex-direction: column;
+        }
+        
+        .drive-detail-sidebar {
+            width: 100%;
+        }
+        
+        .jobs-list {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .drive-header {
+            flex-direction: column;
+        }
+        
+        .drive-institution-logo {
+            margin-bottom: 1rem;
+        }
+        
+        .drive-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}

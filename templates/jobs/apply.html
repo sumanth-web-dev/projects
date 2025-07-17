@@ -1,0 +1,449 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Apply for {{ job.title }} - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+{% if session.authenticated %}
+    {% if 'student' in session.roles %}
+        <li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+        <li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+        <li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+        <li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+        <li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+    {% else %}
+        <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-briefcase"></i> Jobs</a></li>
+        <li><a href="{{ url_for('job.my_applications') }}"><i class="fas fa-clipboard-list"></i> My Applications</a></li>
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block page_title %}Apply for {{ job.title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('job.view_job', job_id=job.id) }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Job</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="application-container">
+    <div class="application-main">
+        <div class="card">
+            <div class="card-header">
+                <h2>Job Application Form</h2>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('job.apply_job', job_id=job.id) }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                    
+                    <div class="form-section">
+                        <h3>Personal Information</h3>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" value="{{ user.email }}" readonly>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="first_name">First Name</label>
+                                    <input type="text" id="first_name" name="first_name" class="form-control" value="{{ user.personal_data.first_name }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="last_name">Last Name</label>
+                                    <input type="text" id="last_name" name="last_name" class="form-control" value="{{ user.personal_data.last_name }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" class="form-control" value="{{ user.personal_data.phone }}" readonly>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>Resume</h3>
+                        <div class="form-group">
+                            <label for="resume">Upload Resume</label>
+                            <div class="custom-file-upload">
+                                <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx">
+                                <label for="resume">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span class="file-label">Choose a file</span>
+                                </label>
+                                <span class="selected-file"></span>
+                            </div>
+                            <small class="form-text text-muted">Accepted formats: PDF, DOC, DOCX. Maximum size: 5MB</small>
+                        </div>
+                        
+                        {% if user.personal_data.resume %}
+                            <div class="existing-resume">
+                                <div class="resume-info">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <div class="resume-details">
+                                        <span class="resume-name">{{ user.personal_data.resume.filename }}</span>
+                                        <span class="resume-date">Uploaded on {{ user.personal_data.resume.uploaded_at|date }}</span>
+                                    </div>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" id="use_existing_resume" name="use_existing_resume" class="form-check-input" checked>
+                                    <label for="use_existing_resume" class="form-check-label">Use this resume</label>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>Cover Letter</h3>
+                        <div class="form-group">
+                            <label for="cover_letter">Cover Letter (Optional)</label>
+                            <textarea id="cover_letter" name="cover_letter" class="form-control" rows="8" placeholder="Introduce yourself and explain why you're a good fit for this position..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>Additional Information</h3>
+                        <div class="form-group">
+                            <label for="linkedin">LinkedIn Profile (Optional)</label>
+                            <input type="url" id="linkedin" name="linkedin" class="form-control" placeholder="https://www.linkedin.com/in/yourprofile" value="{{ user.personal_data.linkedin }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="portfolio">Portfolio/Website (Optional)</label>
+                            <input type="url" id="portfolio" name="portfolio" class="form-control" placeholder="https://www.yourportfolio.com" value="{{ user.personal_data.portfolio }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="github">GitHub Profile (Optional)</label>
+                            <input type="url" id="github" name="github" class="form-control" placeholder="https://github.com/yourusername" value="{{ user.personal_data.github }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>Questions</h3>
+                        <div class="form-group">
+                            <label for="availability">When can you start?</label>
+                            <select id="availability" name="availability" class="form-control" required>
+                                <option value="">Select an option</option>
+                                <option value="immediately">Immediately</option>
+                                <option value="two_weeks">2 weeks notice</option>
+                                <option value="one_month">1 month notice</option>
+                                <option value="custom">Other (specify below)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="custom_availability_group" style="display: none;">
+                            <label for="custom_availability">Specify Availability</label>
+                            <input type="text" id="custom_availability" name="custom_availability" class="form-control" placeholder="Please specify your availability">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="salary_expectation">Salary Expectation (Optional)</label>
+                            <input type="text" id="salary_expectation" name="salary_expectation" class="form-control" placeholder="e.g., $50,000 - $60,000">
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-check">
+                            <input type="checkbox" id="terms" name="terms" class="form-check-input" required>
+                            <label for="terms" class="form-check-label">I certify that all information provided is true and complete to the best of my knowledge.</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="privacy" name="privacy" class="form-check-input" required>
+                            <label for="privacy" class="form-check-label">I agree to the <a href="#" target="_blank">Privacy Policy</a> and consent to the processing of my personal data.</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-lg">Submit Application</button>
+                        <a href="{{ url_for('job.view_job', job_id=job.id) }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="application-sidebar">
+        <div class="card">
+            <div class="card-header">
+                <h3>Job Summary</h3>
+            </div>
+            <div class="card-body">
+                <h4>{{ job.title }}</h4>
+                <div class="job-company">{{ job.company }}</div>
+                <div class="job-location"><i class="fas fa-map-marker-alt"></i> {{ job.location or 'Remote' }}</div>
+                
+                <div class="job-summary-details">
+                    <div class="summary-item">
+                        <div class="summary-label">Job Type</div>
+                        <div class="summary-value">{{ job.job_type or 'Full-time' }}</div>
+                    </div>
+                    
+                    {% if job.salary_min and job.salary_max %}
+                        <div class="summary-item">
+                            <div class="summary-label">Salary Range</div>
+                            <div class="summary-value">${{ job.salary_min|int }} - ${{ job.salary_max|int }}</div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if job.experience_required is not none %}
+                        <div class="summary-item">
+                            <div class="summary-label">Experience</div>
+                            <div class="summary-value">{{ job.experience_required }}+ years</div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="summary-item">
+                        <div class="summary-label">Posted</div>
+                        <div class="summary-value">{{ job.created_at|date }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Application Tips</h3>
+            </div>
+            <div class="card-body">
+                <ul class="tips-list">
+                    <li>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Tailor your resume to highlight relevant skills and experience</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Write a personalized cover letter addressing the specific job requirements</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Proofread your application for spelling and grammar errors</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Include specific examples of your achievements</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle"></i>
+                        <span>Be honest about your qualifications and experience</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .application-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .application-main {
+        flex: 1;
+    }
+    
+    .application-sidebar {
+        width: 350px;
+        flex-shrink: 0;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    
+    .form-section h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .custom-file-upload {
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .custom-file-upload input[type="file"] {
+        position: absolute;
+        left: -9999px;
+    }
+    
+    .custom-file-upload label {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 0;
+    }
+    
+    .custom-file-upload label i {
+        margin-right: 0.5rem;
+    }
+    
+    .selected-file {
+        margin-left: 1rem;
+        color: var(--gray-color);
+    }
+    
+    .existing-resume {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .resume-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .resume-info i {
+        font-size: 2rem;
+        color: #e74c3c;
+        margin-right: 1rem;
+    }
+    
+    .resume-details {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .resume-name {
+        font-weight: 500;
+    }
+    
+    .resume-date {
+        font-size: 0.85rem;
+        color: var(--gray-color);
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 2rem;
+    }
+    
+    .job-company {
+        color: var(--gray-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .job-location {
+        color: var(--gray-color);
+        margin-bottom: 1.5rem;
+    }
+    
+    .job-summary-details {
+        margin-top: 1.5rem;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+    
+    .summary-label {
+        color: var(--gray-color);
+    }
+    
+    .summary-value {
+        font-weight: 500;
+    }
+    
+    .tips-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .tips-list li {
+        display: flex;
+        margin-bottom: 1rem;
+    }
+    
+    .tips-list li:last-child {
+        margin-bottom: 0;
+    }
+    
+    .tips-list li i {
+        color: var(--success-color);
+        margin-right: 0.75rem;
+        margin-top: 0.25rem;
+        flex-shrink: 0;
+    }
+    
+    @media (max-width: 992px) {
+        .application-container {
+            flex-direction: column;
+        }
+        
+        .application-sidebar {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // File upload handling
+        const fileInput = document.getElementById('resume');
+        const fileLabel = document.querySelector('.file-label');
+        const selectedFile = document.querySelector('.selected-file');
+        
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                selectedFile.textContent = fileInput.files[0].name;
+                
+                // Uncheck "use existing resume" if it exists
+                const useExistingResume = document.getElementById('use_existing_resume');
+                if (useExistingResume) {
+                    useExistingResume.checked = false;
+                }
+            } else {
+                selectedFile.textContent = '';
+            }
+        });
+        
+        // Custom availability field toggle
+        const availabilitySelect = document.getElementById('availability');
+        const customAvailabilityGroup = document.getElementById('custom_availability_group');
+        
+        availabilitySelect.addEventListener('change', function() {
+            if (availabilitySelect.value === 'custom') {
+                customAvailabilityGroup.style.display = 'block';
+            } else {
+                customAvailabilityGroup.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

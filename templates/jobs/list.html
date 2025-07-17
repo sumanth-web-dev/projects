@@ -1,0 +1,502 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Jobs - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+{% if session.authenticated %}
+    {% if 'student' in session.roles %}
+        <li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+        <li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+        <li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+        <li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+        <li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+    {% elif 'hr' in session.roles %}
+        <li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Manage Jobs</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-search"></i> Browse Jobs</a></li>
+        <li><a href="{{ url_for('hr.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+    {% else %}
+        <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-briefcase"></i> Jobs</a></li>
+        <li><a href="{{ url_for('job.my_applications') }}"><i class="fas fa-clipboard-list"></i> My Applications</a></li>
+    {% endif %}
+{% else %}
+    <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>
+    <li><a href="{{ url_for('job.list_jobs') }}" class="active"><i class="fas fa-briefcase"></i> Jobs</a></li>
+    <li><a href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+    <li><a href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+{% endif %}
+{% endblock %}
+
+{% block page_title %}Browse Jobs{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#filterModal">
+    <i class="fas fa-filter"></i> Filter
+</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="job-search-container">
+    <div class="job-search-sidebar">
+        <div class="card">
+            <div class="card-header">
+                <h3>Filter Jobs</h3>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" action="{{ url_for('job.list_jobs') }}" method="GET">
+                    <div class="form-group">
+                        <label for="keywords">Keywords</label>
+                        <input type="text" id="keywords" name="keywords" class="form-control" value="{{ query_params.keywords }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" class="form-control" value="{{ query_params.location }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category_id">Category</label>
+                        <select id="category_id" name="category_id" class="form-control">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if query_params.category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Salary Range</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="number" id="min_salary" name="min_salary" class="form-control" placeholder="Min" value="{{ query_params.min_salary }}">
+                            </div>
+                            <div class="col">
+                                <input type="number" id="max_salary" name="max_salary" class="form-control" placeholder="Max" value="{{ query_params.max_salary }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="experience_level">Experience (Years)</label>
+                        <select id="experience_level" name="experience_level" class="form-control">
+                            <option value="">Any Experience</option>
+                            <option value="0" {% if query_params.experience_level == 0 %}selected{% endif %}>Fresher</option>
+                            <option value="1" {% if query_params.experience_level == 1 %}selected{% endif %}>1 Year</option>
+                            <option value="2" {% if query_params.experience_level == 2 %}selected{% endif %}>2 Years</option>
+                            <option value="3" {% if query_params.experience_level == 3 %}selected{% endif %}>3 Years</option>
+                            <option value="5" {% if query_params.experience_level == 5 %}selected{% endif %}>5+ Years</option>
+                            <option value="10" {% if query_params.experience_level == 10 %}selected{% endif %}>10+ Years</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="job_type">Job Type</label>
+                        <select id="job_type" name="job_type" class="form-control">
+                            <option value="">All Types</option>
+                            {% for job_type in job_types %}
+                                <option value="{{ job_type }}" {% if query_params.job_type == job_type %}selected{% endif %}>
+                                    {{ job_type }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input type="checkbox" id="remote_option" name="remote_option" class="form-check-input" value="true" {% if query_params.remote_option %}checked{% endif %}>
+                        <label for="remote_option" class="form-check-label">Remote Jobs Only</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Skills</label>
+                        <div class="skill-selector">
+                            {% for skill in popular_skills %}
+                                <div class="skill-checkbox">
+                                    <input type="checkbox" id="skill_{{ skill.id }}" name="skills" value="{{ skill.name }}" 
+                                        {% if skill.name in query_params.skills %}checked{% endif %}>
+                                    <label for="skill_{{ skill.id }}">{{ skill.name }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sort_by">Sort By</label>
+                        <select id="sort_by" name="sort_by" class="form-control">
+                            <option value="created_at" {% if query_params.sort_by == 'created_at' %}selected{% endif %}>Date Posted</option>
+                            <option value="salary" {% if query_params.sort_by == 'salary' %}selected{% endif %}>Salary</option>
+                            <option value="experience" {% if query_params.sort_by == 'experience' %}selected{% endif %}>Experience</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sort_order">Sort Order</label>
+                        <select id="sort_order" name="sort_order" class="form-control">
+                            <option value="desc" {% if query_params.sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                            <option value="asc" {% if query_params.sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" id="clearFilters">Clear Filters</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="job-search-results">
+        <div class="search-summary">
+            <p>Found <strong>{{ metadata.total_count }}</strong> jobs matching your criteria</p>
+        </div>
+        
+        {% if jobs %}
+            <div class="jobs-list">
+                {% for job in jobs %}
+                    <div class="job-card">
+                        <div class="job-card-header">
+                            <h3><a href="{{ url_for('job.view_job', job_id=job.id) }}">{{ job.title }}</a></h3>
+                            <span class="job-company">{{ job.company }}</span>
+                        </div>
+                        <div class="job-card-body">
+                            <div class="job-details">
+                                <div class="job-detail">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ job.location or 'Remote' }}</span>
+                                </div>
+                                {% if job.salary_min and job.salary_max %}
+                                    <div class="job-detail">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                        <span>${{ job.salary_min|int }} - ${{ job.salary_max|int }}</span>
+                                    </div>
+                                {% endif %}
+                                <div class="job-detail">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span>{{ job.job_type or 'Full-time' }}</span>
+                                </div>
+                                {% if job.experience_required is not none %}
+                                    <div class="job-detail">
+                                        <i class="fas fa-user-clock"></i>
+                                        <span>{{ job.experience_required }}+ years</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="job-description">
+                                {{ job.description|truncate(150) }}
+                            </div>
+                            
+                            <div class="job-skills">
+                                {% for skill in job.skills %}
+                                    <span class="skill-tag">{{ skill.skill_name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="job-card-footer">
+                            <span class="job-posted">Posted {{ job.created_at|timeago }}</span>
+                            <div class="job-actions">
+                                <a href="{{ url_for('job.view_job', job_id=job.id) }}" class="btn btn-secondary btn-sm">View Details</a>
+                                <a href="{{ url_for('job.apply_job', job_id=job.id) }}" class="btn btn-primary btn-sm">Apply Now</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="pagination-container">
+                <nav aria-label="Job search pagination">
+                    <ul class="pagination">
+                        {% if metadata.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('job.list_jobs', page=metadata.page-1, **query_params) }}">Previous</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in range(max(1, metadata.page-2), min(metadata.total_pages+1, metadata.page+3)) %}
+                            <li class="page-item {% if page_num == metadata.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('job.list_jobs', page=page_num, **query_params) }}">{{ page_num }}</a>
+                            </li>
+                        {% endfor %}
+                        
+                        {% if metadata.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('job.list_jobs', page=metadata.page+1, **query_params) }}">Next</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% else %}
+            <div class="no-results">
+                <div class="no-results-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>No jobs found</h3>
+                <p>Try adjusting your search criteria or browse all available jobs.</p>
+                <a href="{{ url_for('job.list_jobs') }}" class="btn btn-primary">Browse All Jobs</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filter Modal for Mobile -->
+<div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">Filter Jobs</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Filter form will be cloned here for mobile view -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .job-search-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .job-search-sidebar {
+        width: 300px;
+        flex-shrink: 0;
+    }
+    
+    .job-search-results {
+        flex: 1;
+    }
+    
+    .search-summary {
+        margin-bottom: 1rem;
+        color: var(--gray-color);
+    }
+    
+    .jobs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .job-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 1.5rem;
+        transition: transform 0.2s;
+    }
+    
+    .job-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .job-card-header {
+        margin-bottom: 1rem;
+    }
+    
+    .job-card-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+    
+    .job-card-header h3 a {
+        color: var(--dark-color);
+        text-decoration: none;
+    }
+    
+    .job-card-header h3 a:hover {
+        color: var(--primary-color);
+    }
+    
+    .job-company {
+        color: var(--gray-color);
+        font-size: 0.9rem;
+    }
+    
+    .job-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .job-detail {
+        display: flex;
+        align-items: center;
+        color: var(--gray-color);
+        font-size: 0.9rem;
+    }
+    
+    .job-detail i {
+        margin-right: 0.5rem;
+    }
+    
+    .job-description {
+        margin-bottom: 1rem;
+        color: var(--dark-color);
+        font-size: 0.95rem;
+    }
+    
+    .job-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .skill-tag {
+        background-color: #e8f4fd;
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+    }
+    
+    .job-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1rem;
+    }
+    
+    .job-posted {
+        color: var(--gray-color);
+        font-size: 0.85rem;
+    }
+    
+    .job-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .pagination-container {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .page-item {
+        margin: 0 0.25rem;
+    }
+    
+    .page-link {
+        display: block;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        background-color: white;
+        color: var(--dark-color);
+        text-decoration: none;
+        box-shadow: var(--shadow);
+    }
+    
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    
+    .page-item.disabled .page-link {
+        background-color: #f5f5f5;
+        color: var(--gray-color);
+        cursor: not-allowed;
+    }
+    
+    .no-results {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 3rem;
+        text-align: center;
+    }
+    
+    .no-results-icon {
+        font-size: 3rem;
+        color: var(--gray-color);
+        margin-bottom: 1rem;
+    }
+    
+    .skill-selector {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.5rem;
+    }
+    
+    .skill-checkbox {
+        margin-bottom: 0.5rem;
+    }
+    
+    #filterModal {
+        display: none;
+    }
+    
+    @media (max-width: 992px) {
+        .job-search-container {
+            flex-direction: column;
+        }
+        
+        .job-search-sidebar {
+            width: 100%;
+            display: none;
+        }
+        
+        #filterModal {
+            display: block;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clone filter form for mobile modal
+        const filterForm = document.getElementById('filterForm');
+        const modalBody = document.querySelector('.modal-body');
+        const filterFormClone = filterForm.cloneNode(true);
+        filterFormClone.id = 'filterFormMobile';
+        modalBody.appendChild(filterFormClone);
+        
+        // Clear filters button
+        document.getElementById('clearFilters').addEventListener('click', function() {
+            window.location.href = "{{ url_for('job.list_jobs') }}";
+        });
+        
+        // Handle mobile filter form submission
+        document.getElementById('filterFormMobile').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+            
+            for (const [key, value] of formData.entries()) {
+                if (value) {
+                    params.append(key, value);
+                }
+            }
+            
+            window.location.href = "{{ url_for('job.list_jobs') }}" + "?" + params.toString();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Student Dashboard - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.internships') }}"><i class="fas fa-graduation-cap"></i> Internships</a></li>
+<li><a href="{{ url_for('student.placements') }}"><i class="fas fa-building"></i> Placements</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+<li><a href="{{ url_for('student.skills_assessment') }}"><i class="fas fa-tasks"></i> Skills Assessment</a></li>
+<li><a href="{{ url_for('student.courses') }}"><i class="fas fa-book"></i> Courses</a></li>
+<li><a href="{{ url_for('student.events') }}"><i class="fas fa-calendar-alt"></i> Events</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Student Dashboard{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('job.list_jobs') }}" class="btn btn-primary"><i class="fas fa-search"></i> Find Jobs</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.applications_count|default(0) }}</div>
+        <div class="stat-label">Applications</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.interviews_count|default(0) }}</div>
+        <div class="stat-label">Interviews</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.offers_count|default(0) }}</div>
+        <div class="stat-label">Offers</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.profile_completion|default(0) }}%</div>
+        <div class="stat-label">Profile Completion</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Recommended Jobs</h2>
+                <a href="{{ url_for('job.recommended_jobs') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recommended_jobs %}
+                    <div class="list-group">
+                        {% for job in recommended_jobs %}
+                            <a href="{{ url_for('job.view_job', job_id=job.job.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ job.job.title }}</h5>
+                                        <p class="mb-1">{{ job.job.company }}</p>
+                                        <small>{{ job.job.location }}</small>
+                                    </div>
+                                    <span class="badge badge-primary">{{ (job.match_score * 100)|round }}% Match</span>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center">No recommended jobs yet. Complete your profile to get personalized recommendations.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Upcoming Campus Drives</h2>
+                <a href="{{ url_for('campus_drive.list_drives') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_drives %}
+                    <div class="list-group">
+                        {% for drive in upcoming_drives %}
+                            <a href="{{ url_for('campus_drive.view_drive', drive_id=drive.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ drive.title }}</h5>
+                                        <p class="mb-1">{{ drive.institution.name }}</p>
+                                        <small>{{ drive.start_date|date }}</small>
+                                    </div>
+                                    {% if drive.is_virtual %}
+                                        <span class="badge badge-info">Virtual</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center">No upcoming campus drives.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Recent Applications</h2>
+                <a href="{{ url_for('student.applications') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_applications %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Job Title</th>
+                                    <th>Company</th>
+                                    <th>Status</th>
+                                    <th>Applied On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in recent_applications %}
+                                    <tr>
+                                        <td>{{ application.job.title }}</td>
+                                        <td>{{ application.job.company }}</td>
+                                        <td>
+                                            {% if application.status == 'submitted' %}
+                                                <span class="badge badge-info">Submitted</span>
+                                            {% elif application.status == 'under_review' %}
+                                                <span class="badge badge-primary">Under Review</span>
+                                            {% elif application.status == 'shortlisted' %}
+                                                <span class="badge badge-success">Shortlisted</span>
+                                            {% elif application.status == 'rejected' %}
+                                                <span class="badge badge-danger">Rejected</span>
+                                            {% elif application.status == 'interview_scheduled' %}
+                                                <span class="badge badge-warning">Interview Scheduled</span>
+                                            {% elif application.status == 'offer_received' %}
+                                                <span class="badge badge-success">Offer Received</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ application.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ application.submitted_at|date }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No recent applications.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Profile Completion</h2>
+                <a href="{{ url_for('student.profile') }}" class="btn btn-sm btn-secondary">Update Profile</a>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar" role="progressbar" style="width: {{ stats.profile_completion|default(0) }}%;" aria-valuenow="{{ stats.profile_completion|default(0) }}" aria-valuemin="0" aria-valuemax="100">{{ stats.profile_completion|default(0) }}%</div>
+                </div>
+                
+                <div class="profile-checklist">
+                    <div class="checklist-item {% if profile_checks.basic_info %}completed{% endif %}">
+                        <i class="fas {% if profile_checks.basic_info %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %}"></i>
+                        <span>Basic Information</span>
+                    </div>
+                    <div class="checklist-item {% if profile_checks.education %}completed{% endif %}">
+                        <i class="fas {% if profile_checks.education %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %}"></i>
+                        <span>Education Details</span>
+                    </div>
+                    <div class="checklist-item {% if profile_checks.skills %}completed{% endif %}">
+                        <i class="fas {% if profile_checks.skills %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %}"></i>
+                        <span>Skills</span>
+                    </div>
+                    <div class="checklist-item {% if profile_checks.resume %}completed{% endif %}">
+                        <i class="fas {% if profile_checks.resume %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %}"></i>
+                        <span>Resume</span>
+                    </div>
+                    <div class="checklist-item {% if profile_checks.projects %}completed{% endif %}">
+                        <i class="fas {% if profile_checks.projects %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %}"></i>
+                        <span>Projects</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .profile-checklist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .checklist-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        width: calc(50% - 0.5rem);
+    }
+    
+    .checklist-item i {
+        margin-right: 0.5rem;
+    }
+    
+    .checklist-item.completed {
+        background-color: #e8f5e9;
+    }
+    
+    .progress {
+        height: 1.5rem;
+        border-radius: 0.5rem;
+    }
+    
+    .progress-bar {
+        background-color: var(--primary-color);
+    }
+    
+    @media (max-width: 768px) {
+        .checklist-item {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

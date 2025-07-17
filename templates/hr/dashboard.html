@@ -1,0 +1,277 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}HR Dashboard - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('hr.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+<li><a href="{{ url_for('hr.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('hr.candidates') }}"><i class="fas fa-users"></i> Candidates</a></li>
+<li><a href="{{ url_for('hr.interviews') }}"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('hr.campus_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('hr.reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+<li><a href="{{ url_for('hr.talent_pool') }}"><i class="fas fa-database"></i> Talent Pool</a></li>
+<li><a href="{{ url_for('hr.job_descriptions') }}"><i class="fas fa-file-alt"></i> Job Descriptions</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}HR Dashboard{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('hr.jobs', action='create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Post New Job</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.active_jobs|default(0) }}</div>
+        <div class="stat-label">Active Jobs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_applications|default(0) }}</div>
+        <div class="stat-label">Total Applications</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.pending_interviews|default(0) }}</div>
+        <div class="stat-label">Pending Interviews</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.conversion_rate|default(0) }}%</div>
+        <div class="stat-label">Conversion Rate</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Recent Applications</h2>
+                <a href="{{ url_for('hr.applications') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_applications %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Candidate</th>
+                                    <th>Job Title</th>
+                                    <th>Status</th>
+                                    <th>Applied On</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in recent_applications %}
+                                    <tr>
+                                        <td>{{ application.user.email }}</td>
+                                        <td>{{ application.job.title }}</td>
+                                        <td>
+                                            {% if application.status == 'submitted' %}
+                                                <span class="badge badge-info">Submitted</span>
+                                            {% elif application.status == 'under_review' %}
+                                                <span class="badge badge-primary">Under Review</span>
+                                            {% elif application.status == 'shortlisted' %}
+                                                <span class="badge badge-success">Shortlisted</span>
+                                            {% elif application.status == 'rejected' %}
+                                                <span class="badge badge-danger">Rejected</span>
+                                            {% elif application.status == 'interview_scheduled' %}
+                                                <span class="badge badge-warning">Interview Scheduled</span>
+                                            {% elif application.status == 'offer_received' %}
+                                                <span class="badge badge-success">Offer Received</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ application.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ application.submitted_at|date }}</td>
+                                        <td>
+                                            <a href="{{ url_for('hr.application_detail', application_id=application.id) }}" class="btn btn-sm btn-primary">View</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No recent applications.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Upcoming Interviews</h2>
+                <a href="{{ url_for('hr.interviews') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_interviews %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Candidate</th>
+                                    <th>Job Title</th>
+                                    <th>Date & Time</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for interview in upcoming_interviews %}
+                                    <tr>
+                                        <td>{{ interview.application.user.email }}</td>
+                                        <td>{{ interview.application.job.title }}</td>
+                                        <td>{{ interview.scheduled_at|datetime }}</td>
+                                        <td>{{ interview.interview_type }}</td>
+                                        <td>
+                                            <a href="{{ url_for('hr.interviews') }}?id={{ interview.id }}" class="btn btn-sm btn-primary">View</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No upcoming interviews.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Application Status</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="applicationStatusChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Job Performance</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="jobPerformanceChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Upcoming Campus Drives</h2>
+                <a href="{{ url_for('hr.campus_drives') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_drives %}
+                    <div class="list-group">
+                        {% for drive in upcoming_drives %}
+                            <a href="{{ url_for('campus_drive.view_drive', drive_id=drive.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ drive.title }}</h5>
+                                        <p class="mb-1">{{ drive.institution.name }}</p>
+                                        <small>{{ drive.start_date|date }}</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge badge-primary">{{ drive.registrations|length }} Registrations</span>
+                                        {% if drive.is_virtual %}
+                                            <span class="badge badge-info">Virtual</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center">No upcoming campus drives.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Application Status Chart
+    const statusCtx = document.getElementById('applicationStatusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Offer', 'Rejected'],
+            datasets: [{
+                data: [
+                    {{ status_counts.submitted|default(0) }},
+                    {{ status_counts.under_review|default(0) }},
+                    {{ status_counts.shortlisted|default(0) }},
+                    {{ status_counts.interview_scheduled|default(0) }},
+                    {{ status_counts.offer_received|default(0) }},
+                    {{ status_counts.rejected|default(0) }}
+                ],
+                backgroundColor: [
+                    '#3498db',
+                    '#9b59b6',
+                    '#2ecc71',
+                    '#f39c12',
+                    '#1abc9c',
+                    '#e74c3c'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+    
+    // Job Performance Chart
+    const jobCtx = document.getElementById('jobPerformanceChart').getContext('2d');
+    const jobChart = new Chart(jobCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ job_performance.labels|safe }},
+            datasets: [{
+                label: 'Applications',
+                data: {{ job_performance.applications|safe }},
+                backgroundColor: '#3498db'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Applications'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Job Title'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

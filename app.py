@@ -27,6 +27,8 @@ from services.otp_service import otp_service
 from services.recommendation_service import recommendation_service
 from services.resume_parser_service import resume_parser_service
 from services.analytics_service import analytics_service
+from services.job_search_service import job_search_service
+from services.campus_drive_service import campus_drive_service
 
 
 def create_app(config_name='Config'):
@@ -133,6 +135,12 @@ def create_app(config_name='Config'):
     # Initialize analytics service
     analytics_service.init_app(app)
     
+    # Initialize job search service
+    job_search_service.init_app(app)
+    
+    # Initialize campus drive service
+    campus_drive_service.init_app(app)
+    
     # Register error handlers
     register_error_handlers(app)
     
@@ -141,6 +149,8 @@ def create_app(config_name='Config'):
     from api.hr_routes import hr_bp
     from api.admin_routes import admin_bp
     from api.student_routes import student_bp
+    from api.job_routes import job_bp
+    from api.campus_drive_routes import campus_drive_bp
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -150,6 +160,8 @@ def create_app(config_name='Config'):
     app.register_blueprint(hr_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(student_bp)
+    app.register_blueprint(job_bp)
+    app.register_blueprint(campus_drive_bp)
     
     # Apply rate limiting to API endpoints
     apply_default_rate_limits(app)

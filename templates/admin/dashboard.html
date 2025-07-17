@@ -1,0 +1,396 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Admin Dashboard - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('admin.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a></li>
+<li><a href="{{ url_for('admin.roles') }}"><i class="fas fa-user-tag"></i> Roles</a></li>
+<li><a href="{{ url_for('admin.system_settings') }}"><i class="fas fa-cogs"></i> System Settings</a></li>
+<li><a href="{{ url_for('admin.email_templates') }}"><i class="fas fa-envelope"></i> Email Templates</a></li>
+<li><a href="{{ url_for('admin.logs') }}"><i class="fas fa-list"></i> Logs</a></li>
+<li><a href="{{ url_for('admin.security_audit') }}"><i class="fas fa-shield-alt"></i> Security Audit</a></li>
+<li><a href="{{ url_for('admin.backup') }}"><i class="fas fa-database"></i> Backup</a></li>
+<li><a href="{{ url_for('admin.analytics') }}"><i class="fas fa-chart-line"></i> Analytics</a></li>
+<li><a href="{{ url_for('admin.notifications') }}"><i class="fas fa-bell"></i> Notifications</a></li>
+<li><a href="{{ url_for('admin.job_categories') }}"><i class="fas fa-tags"></i> Job Categories</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('admin.users', action='create') }}" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add User</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_users|default(0) }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.active_users|default(0) }}</div>
+        <div class="stat-label">Active Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_jobs|default(0) }}</div>
+        <div class="stat-label">Total Jobs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_applications|default(0) }}</div>
+        <div class="stat-label">Total Applications</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>System Status</h2>
+            </div>
+            <div class="card-body">
+                <div class="system-status">
+                    <div class="status-item">
+                        <div class="status-label">System Uptime</div>
+                        <div class="status-value">{{ system_status.uptime }}</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Database Status</div>
+                        <div class="status-value">
+                            {% if system_status.database_status == 'ok' %}
+                                <span class="status-indicator green"></span> Connected
+                            {% else %}
+                                <span class="status-indicator red"></span> Error
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Cache Status</div>
+                        <div class="status-value">
+                            {% if system_status.cache_status == 'ok' %}
+                                <span class="status-indicator green"></span> Connected
+                            {% else %}
+                                <span class="status-indicator red"></span> Error
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Email Service</div>
+                        <div class="status-value">
+                            {% if system_status.email_status == 'ok' %}
+                                <span class="status-indicator green"></span> Connected
+                            {% else %}
+                                <span class="status-indicator red"></span> Error
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Storage</div>
+                        <div class="status-value">{{ system_status.storage_usage }}</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Memory Usage</div>
+                        <div class="status-value">{{ system_status.memory_usage }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>User Growth</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="userGrowthChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>User Distribution</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="userDistributionChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Recent User Activity</h2>
+                <a href="{{ url_for('admin.logs') }}" class="btn btn-sm btn-secondary">View All Logs</a>
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>IP Address</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activity %}
+                                    <tr>
+                                        <td>{{ activity.user_email }}</td>
+                                        <td>{{ activity.action }}</td>
+                                        <td>{{ activity.ip_address }}</td>
+                                        <td>{{ activity.timestamp|datetime }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No recent activity.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>Security Alerts</h2>
+                <a href="{{ url_for('admin.security_audit') }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if security_alerts %}
+                    <div class="list-group">
+                        {% for alert in security_alerts %}
+                            <div class="list-group-item list-group-item-action flex-column align-items-start">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ alert.event_type }}</h5>
+                                    <small>{{ alert.timestamp|datetime }}</small>
+                                </div>
+                                <p class="mb-1">{{ alert.description }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>IP: {{ alert.ip_address }}</small>
+                                    <span class="badge badge-{{ alert.severity }}">{{ alert.severity }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center">No security alerts.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h2>System Performance</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .system-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .status-item {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 1rem;
+    }
+    
+    .status-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .status-value {
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    
+    .status-indicator.green {
+        background-color: #2ecc71;
+    }
+    
+    .status-indicator.red {
+        background-color: #e74c3c;
+    }
+    
+    .status-indicator.yellow {
+        background-color: #f39c12;
+    }
+    
+    .badge-warning {
+        background-color: #f39c12;
+        color: white;
+    }
+    
+    .badge-danger {
+        background-color: #e74c3c;
+    }
+    
+    .badge-info {
+        background-color: #3498db;
+    }
+</style>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // User Growth Chart
+    const growthCtx = document.getElementById('userGrowthChart').getContext('2d');
+    const growthChart = new Chart(growthCtx, {
+        type: 'line',
+        data: {
+            labels: {{ user_growth.labels|safe }},
+            datasets: [{
+                label: 'New Users',
+                data: {{ user_growth.data|safe }},
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Users'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+    
+    // User Distribution Chart
+    const distributionCtx = document.getElementById('userDistributionChart').getContext('2d');
+    const distributionChart = new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Admin', 'HR', 'Student', 'Regular User'],
+            datasets: [{
+                data: [
+                    {{ user_distribution.admin|default(0) }},
+                    {{ user_distribution.hr|default(0) }},
+                    {{ user_distribution.student|default(0) }},
+                    {{ user_distribution.user|default(0) }}
+                ],
+                backgroundColor: [
+                    '#e74c3c',
+                    '#3498db',
+                    '#2ecc71',
+                    '#f39c12'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+    
+    // Performance Chart
+    const perfCtx = document.getElementById('performanceChart').getContext('2d');
+    const perfChart = new Chart(perfCtx, {
+        type: 'line',
+        data: {
+            labels: {{ performance.labels|safe }},
+            datasets: [{
+                label: 'Response Time (ms)',
+                data: {{ performance.response_times|safe }},
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                yAxisID: 'y',
+                tension: 0.4
+            }, {
+                label: 'Error Rate (%)',
+                data: {{ performance.error_rates|safe }},
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                yAxisID: 'y1',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Response Time (ms)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Error Rate (%)'
+                    },
+                    min: 0,
+                    max: 5
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
