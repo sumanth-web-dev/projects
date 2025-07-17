@@ -45,6 +45,10 @@ class User(db.Model):
         # Set default values if not provided in kwargs
         if 'is_active' not in kwargs:
             self.is_active = True
+        if 'created_at' not in kwargs:
+            self.created_at = datetime.utcnow()
+        if 'updated_at' not in kwargs:
+            self.updated_at = datetime.utcnow()
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)

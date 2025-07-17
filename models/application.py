@@ -83,6 +83,10 @@ class Application(db.Model):
             self.retry_count = "0"
         if 'error_count' not in kwargs:
             self.error_count = "0"
+        if 'created_at' not in kwargs:
+            self.created_at = datetime.utcnow()
+        if 'updated_at' not in kwargs:
+            self.updated_at = datetime.utcnow()
         
         for key, value in kwargs.items():
             if hasattr(self, key):

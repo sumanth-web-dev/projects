@@ -77,6 +77,8 @@ class Job(db.Model):
             self.application_count = 0
         if 'salary_currency' not in kwargs:
             self.salary_currency = 'USD'
+        if 'discovered_at' not in kwargs:
+            self.discovered_at = datetime.utcnow()
             
         for key, value in kwargs.items():
             if hasattr(self, key):
