@@ -27,6 +27,8 @@ class JobSearchService:
             app: Flask application instance for configuration
         """
         self.app = app
+        # Dictionary to store active search tasks
+        self.active_searches = {}
         
         if app is not None:
             self.init_app(app)
@@ -516,6 +518,125 @@ class JobSearchService:
         except Exception as e:
             logger.error(f"Error finding similar jobs: {str(e)}")
             return []
+    
+    def trigger_search(self, user_id: str, criteria: Dict, preferences: Dict = None) -> Tuple[bool, str, str]:
+        """Trigger a job search across configured platforms.
+        
+        This method initiates an asynchronous job search process across multiple job websites
+        based on the provided criteria and user preferences.
+        
+        Args:
+            user_id: The ID of the user initiating the search
+            criteria: Dictionary containing search parameters
+            preferences: User preferences for filtering results
+                
+        Returns:
+            Tuple[bool, str, str]: (success, search_id, message)
+        """
+        try:
+            # Generate a unique search ID
+            search_id = str(uuid.uuid4())
+            
+            # Store search information
+            self.active_searches[search_id] = {
+                'user_id': user_id,
+                'criteria': criteria,
+                'preferences': preferences or {},
+                'status': 'pending',
+                'created_at': datetime.datetime.utcnow(),
+                'results': [],
+                'error': None
+            }
+            
+            # In a real implementation, this would trigger background tasks
+            # to search across different job platforms using adapters
+            
+            # For now, we'll simulate by searching the database
+            success, jobs, message = self.search_jobs(criteria)
+            
+            if success:
+                # Apply user preferences if provided
+                if preferences:
+                    jobs = self.filter_jobs(jobs, preferences)
+                
+                # Update search status
+                self.active_searches[search_id]['status'] = 'completed'
+                self.active_searches[search_id]['results'] = [job.id for job in jobs]
+                self.active_searches[search_id]['completed_at'] = datetime.datetime.utcnow()
+                
+                return True, search_id, f"Search completed with {len(jobs)} results"
+            else:
+                # Update search status with error
+                self.active_searches[search_id]['status'] = 'failed'
+                self.active_searches[search_id]['error'] = message
+                self.active_searches[search_id]['completed_at'] = datetime.datetime.utcnow()
+                
+                return False, search_id, f"Search failed: {message}"
+                
+        except Exception as e:
+            logger.error(f"Error triggering job search: {str(e)}")
+            return False, "", f"Error triggering job search: {str(e)}"
+    
+    def get_search_status(self, search_id: str) -> Tuple[bool, Dict, str]:
+        """Get the status of a job search.
+        
+        Args:
+            search_id: The ID of the search to check
+                
+        Returns:
+            Tuple[bool, Dict, str]: (success, status_data, message)
+        """
+        if search_id not in self.active_searches:
+            return False, {}, "Search not found"
+        
+        search_data = self.active_searches[search_id]
+        
+        # Create a copy of the search data for the response
+        status_data = {
+            'search_id': search_id,
+            'user_id': search_data['user_id'],
+            'status': search_data['status'],
+            'created_at': search_data['created_at'].isoformat(),
+            'completed_at': search_data['completed_at'].isoformat() if 'completed_at' in search_data else None,
+            'result_count': len(search_data['results']),
+            'criteria': search_data['criteria']
+        }
+        
+        if search_data['status'] == 'failed' and search_data['error']:
+            status_data['error'] = search_data['error']
+        
+        return True, status_data, f"Search status: {search_data['status']}"
+    
+    def get_search_results(self, search_id: str, limit: int = 100, offset: int = 0) -> Tuple[bool, List[Job], str]:
+        """Get the results of a completed job search.
+        
+        Args:
+            search_id: The ID of the search
+            limit: Maximum number of results to return
+            offset: Offset for pagination
+                
+        Returns:
+            Tuple[bool, List[Job], str]: (success, jobs, message)
+        """
+        if search_id not in self.active_searches:
+            return False, [], "Search not found"
+        
+        search_data = self.active_searches[search_id]
+        
+        if search_data['status'] != 'completed':
+            return False, [], f"Search is not completed (status: {search_data['status']})"
+        
+        # Get job IDs for this page
+        job_ids = search_data['results'][offset:offset+limit]
+        
+        # Fetch jobs from database
+        jobs = []
+        for job_id in job_ids:
+            job = self.get_job_by_id(job_id)
+            if job:
+                jobs.append(job)
+        
+        return True, jobs, f"Retrieved {len(jobs)} jobs"
     
     def _apply_search_filters(self, query, criteria: Dict):
         """Apply search filters to the query based on criteria.

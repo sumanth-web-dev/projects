@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Management - Job Application Agent{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h2>Profile Management</h2>
+    
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="personal-info">Personal Information</button>
+        <button class="tab-btn" data-tab="resumes">Resumes</button>
+        <button class="tab-btn" data-tab="cover-letters">Cover Letters</button>
+        <button class="tab-btn" data-tab="preferences">Job Preferences</button>
+    </div>
+    
+    <div class="tab-content">
+        <!-- Personal Information Tab -->
+        <div id="personal-info" class="tab-pane active">
+            <form id="personal-info-form" class="profile-form">
+                <h3>Personal Information</h3>
+                
+                <div class="form-group">
+                    <label for="full-name">Full Name</label>
+                    <input type="text" id="full-name" name="full_name" value="{{ profile.personal_info.full_name if profile and profile.personal_info else '' }}" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ profile.personal_info.email if profile and profile.personal_info else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" name="phone" value="{{ profile.personal_info.phone if profile and profile.personal_info else '' }}" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" name="address" value="{{ profile.personal_info.address if profile and profile.personal_info else '' }}">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city" value="{{ profile.personal_info.city if profile and profile.personal_info else '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state" name="state" value="{{ profile.personal_info.state if profile and profile.personal_info else '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="zip">ZIP Code</label>
+                        <input type="text" id="zip" name="zip" value="{{ profile.personal_info.zip if profile and profile.personal_info else '' }}">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="linkedin">LinkedIn URL</label>
+                    <input type="url" id="linkedin" name="linkedin" value="{{ profile.personal_info.linkedin if profile and profile.personal_info else '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="portfolio">Portfolio URL</label>
+                    <input type="url" id="portfolio" name="portfolio" value="{{ profile.personal_info.portfolio if profile and profile.personal_info else '' }}">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Personal Information</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Resumes Tab -->
+        <div id="resumes" class="tab-pane">
+            <h3>Resume Management</h3>
+            
+            <div class="resume-list">
+                {% if profile and profile.resumes %}
+                    {% for resume in profile.resumes %}
+                        <div class="resume-item" data-id="{{ resume.id }}">
+                            <div class="resume-header">
+                                <h4>{{ resume.name }}</h4>
+                                <div class="resume-actions">
+                                    <button class="btn btn-sm btn-edit" data-action="edit-resume" data-id="{{ resume.id }}">Edit</button>
+                                    <button class="btn btn-sm btn-delete" data-action="delete-resume" data-id="{{ resume.id }}">Delete</button>
+                                </div>
+                            </div>
+                            <div class="resume-meta">
+                                <span>Last Updated: {{ resume.updated_at }}</span>
+                                <span>{{ "Default" if resume.is_default else "" }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-items">No resumes uploaded yet.</p>
+                {% endif %}
+            </div>
+            
+            <form id="resume-form" class="profile-form">
+                <h4>Upload New Resume</h4>
+                
+                <div class="form-group">
+                    <label for="resume-name">Resume Name</label>
+                    <input type="text" id="resume-name" name="resume_name" placeholder="e.g., Software Developer Resume" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resume-file">Resume File (PDF)</label>
+                    <input type="file" id="resume-file" name="resume_file" accept=".pdf,.doc,.docx" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resume-description">Description</label>
+                    <textarea id="resume-description" name="resume_description" rows="3" placeholder="Brief description of this resume version"></textarea>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="resume-default" name="resume_default">
+                    <label for="resume-default">Set as default resume</label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Upload Resume</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Cover Letters Tab -->
+        <div id="cover-letters" class="tab-pane">
+            <h3>Cover Letter Management</h3>
+            
+            <div class="cover-letter-list">
+                {% if profile and profile.cover_letters %}
+                    {% for letter in profile.cover_letters %}
+                        <div class="cover-letter-item" data-id="{{ letter.id }}">
+                            <div class="cover-letter-header">
+                                <h4>{{ letter.name }}</h4>
+                                <div class="cover-letter-actions">
+                                    <button class="btn btn-sm btn-edit" data-action="edit-letter" data-id="{{ letter.id }}">Edit</button>
+                                    <button class="btn btn-sm btn-delete" data-action="delete-letter" data-id="{{ letter.id }}">Delete</button>
+                                </div>
+                            </div>
+                            <div class="cover-letter-meta">
+                                <span>Last Updated: {{ letter.updated_at }}</span>
+                                <span>{{ "Default" if letter.is_default else "" }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-items">No cover letters created yet.</p>
+                {% endif %}
+            </div>
+            
+            <form id="cover-letter-form" class="profile-form">
+                <h4>Create New Cover Letter</h4>
+                
+                <div class="form-group">
+                    <label for="letter-name">Cover Letter Name</label>
+                    <input type="text" id="letter-name" name="letter_name" placeholder="e.g., General Software Engineer" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="letter-file">Upload Cover Letter (Optional)</label>
+                    <input type="file" id="letter-file" name="letter_file" accept=".pdf,.doc,.docx">
+                </div>
+                
+                <div class="form-group">
+                    <label for="letter-template">Or Create Template</label>
+                    <textarea id="letter-template" name="letter_template" rows="10" placeholder="Dear Hiring Manager,
+
+I am writing to express my interest in the [Position] role at [Company]..."></textarea>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="letter-default" name="letter_default">
+                    <label for="letter-default">Set as default cover letter</label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Cover Letter</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Job Preferences Tab -->
+        <div id="preferences" class="tab-pane">
+            <h3>Job Preferences</h3>
+            
+            <form id="preferences-form" class="profile-form">
+                <div class="form-group">
+                    <label for="job-title">Desired Job Title</label>
+                    <input type="text" id="job-title" name="job_title" value="{{ profile.preferences.job_title if profile and profile.preferences else '' }}" placeholder="e.g., Software Engineer, Product Manager">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="min-salary">Minimum Salary</label>
+                        <input type="number" id="min-salary" name="min_salary" value="{{ profile.preferences.min_salary if profile and profile.preferences else '' }}" placeholder="e.g., 75000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="max-salary">Maximum Salary</label>
+                        <input type="number" id="max-salary" name="max_salary" value="{{ profile.preferences.max_salary if profile and profile.preferences else '' }}" placeholder="e.g., 120000">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="locations">Preferred Locations</label>
+                    <input type="text" id="locations" name="locations" value="{{ profile.preferences.locations if profile and profile.preferences else '' }}" placeholder="e.g., New York, Remote, San Francisco">
+                    <small>Separate multiple locations with commas</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="job-types">Job Types</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="full-time" name="job_types" value="full_time" {{ 'checked' if profile and profile.preferences and 'full_time' in profile.preferences.job_types else '' }}>
+                            <label for="full-time">Full-time</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="part-time" name="job_types" value="part_time" {{ 'checked' if profile and profile.preferences and 'part_time' in profile.preferences.job_types else '' }}>
+                            <label for="part-time">Part-time</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="contract" name="job_types" value="contract" {{ 'checked' if profile and profile.preferences and 'contract' in profile.preferences.job_types else '' }}>
+                            <label for="contract">Contract</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="remote" name="job_types" value="remote" {{ 'checked' if profile and profile.preferences and 'remote' in profile.preferences.job_types else '' }}>
+                            <label for="remote">Remote</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="experience-level">Experience Level</label>
+                    <select id="experience-level" name="experience_level">
+                        <option value="">Select Experience Level</option>
+                        <option value="entry" {{ 'selected' if profile and profile.preferences and profile.preferences.experience_level == 'entry' else '' }}>Entry Level</option>
+                        <option value="mid" {{ 'selected' if profile and profile.preferences and profile.preferences.experience_level == 'mid' else '' }}>Mid Level</option>
+                        <option value="senior" {{ 'selected' if profile and profile.preferences and profile.preferences.experience_level == 'senior' else '' }}>Senior Level</option>
+                        <option value="executive" {{ 'selected' if profile and profile.preferences and profile.preferences.experience_level == 'executive' else '' }}>Executive</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="skills">Key Skills</label>
+                    <textarea id="skills" name="skills" rows="3" placeholder="e.g., Python, JavaScript, Project Management">{{ profile.preferences.skills if profile and profile.preferences else '' }}</textarea>
+                    <small>Separate skills with commas</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="keywords">Additional Keywords</label>
+                    <textarea id="keywords" name="keywords" rows="3" placeholder="e.g., agile, startup, healthcare">{{ profile.preferences.keywords if profile and profile.preferences else '' }}</textarea>
+                    <small>Separate keywords with commas</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}
