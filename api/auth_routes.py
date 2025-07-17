@@ -6,6 +6,8 @@ import datetime
 import secrets
 from flask import Blueprint, request, jsonify, redirect, url_for, render_template, session, flash
 from services.auth_service import auth_service
+from services.otp_service import otp_service
+from services.notification_service import notification_service
 from api.security_middleware import validate_json_schema, sanitize_inputs, check_content_type
 from utils.input_sanitizer import validate_email
 
@@ -45,7 +47,7 @@ def login():
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """Handle user registration."""
+    """Handle user registration - Step 1: Collect user information and send OTP."""
     if request.method == 'POST':
         # Get form data
         email = request.form.get('email')
@@ -65,18 +67,110 @@ def register():
             flash('Invalid email format', 'error')
             return render_template('register.html')
         
-        # Create user
+        # Store registration data in session for later use
+        session['registration_email'] = email
+        session['registration_password'] = password
+        
+        # Generate OTP
+        otp = otp_service.generate_otp(email)
+        
+        # Send OTP via email
+        html_message = f"""
+        <h2>Email Verification</h2>
+        <p>Thank you for registering with Job Application Agent. Please use the following OTP to verify your email address:</p>
+        <h3 style="font-size: 24px; letter-spacing: 5px; background-color: #f5f5f5; padding: 10px; text-align: center;">{otp}</h3>
+        <p>This OTP will expire in 5 minutes.</p>
+        <p>If you did not request this verification, please ignore this email.</p>
+        """
+        
+        notification_service.send_email_notification(
+            user_id=None,  # No user ID yet
+            subject="Email Verification - Job Application Agent",
+            message=f"Your OTP for email verification is: {otp}. This code will expire in 5 minutes.",
+            html_message=html_message
+        )
+        
+        # Redirect to OTP verification page
+        return redirect(url_for('auth.verify_otp'))
+    
+    # GET request - show registration form
+    return render_template('register.html')
+
+@auth_bp.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    """Handle OTP verification - Step 2: Verify OTP and complete registration."""
+    # Check if registration data exists in session
+    if 'registration_email' not in session or 'registration_password' not in session:
+        flash('Registration session expired. Please start again.', 'error')
+        return redirect(url_for('auth.register'))
+    
+    email = session['registration_email']
+    password = session['registration_password']
+    
+    if request.method == 'POST':
+        # Get OTP from form
+        otp = request.form.get('otp')
+        
+        if not otp:
+            flash('OTP is required', 'error')
+            return render_template('verify_otp.html', email=email)
+        
+        # Verify OTP
+        success, message = otp_service.verify_otp(email, otp)
+        
+        if not success:
+            flash(message, 'error')
+            return render_template('verify_otp.html', email=email)
+        
+        # OTP verified, create user
         success, user_id, message = auth_service.create_user(email, password)
         
         if success:
+            # Clear registration data from session
+            session.pop('registration_email', None)
+            session.pop('registration_password', None)
+            
+            # Clear OTP record
+            otp_service.clear_otp(email)
+            
             flash('Registration successful. Please log in.', 'success')
             return redirect(url_for('auth.login'))
         else:
             flash(message, 'error')
-            return render_template('register.html')
+            return render_template('verify_otp.html', email=email)
     
-    # GET request - show registration form
-    return render_template('register.html')
+    # GET request - show OTP verification form
+    return render_template('verify_otp.html', email=email)
+
+@auth_bp.route('/resend-otp', methods=['POST'])
+def resend_otp():
+    """Resend OTP for email verification."""
+    # Check if registration data exists in session
+    if 'registration_email' not in session:
+        return jsonify({'success': False, 'message': 'Registration session expired. Please start again.'})
+    
+    email = session['registration_email']
+    
+    # Generate new OTP
+    otp = otp_service.generate_otp(email)
+    
+    # Send OTP via email
+    html_message = f"""
+    <h2>Email Verification</h2>
+    <p>You requested a new OTP. Please use the following code to verify your email address:</p>
+    <h3 style="font-size: 24px; letter-spacing: 5px; background-color: #f5f5f5; padding: 10px; text-align: center;">{otp}</h3>
+    <p>This OTP will expire in 5 minutes.</p>
+    <p>If you did not request this verification, please ignore this email.</p>
+    """
+    
+    notification_service.send_email_notification(
+        user_id=None,  # No user ID yet
+        subject="Email Verification - Job Application Agent",
+        message=f"Your new OTP for email verification is: {otp}. This code will expire in 5 minutes.",
+        html_message=html_message
+    )
+    
+    return jsonify({'success': True, 'message': 'OTP resent successfully'})
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():

@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Job Application Agent{% endblock %}
+
+{% block content %}
+<header class="main-header">
+    <div class="container">
+        <nav class="main-nav">
+            <div class="logo">
+                <h1>Job Application Agent</h1>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('main.index') }}">Home</a>
+                <a href="{{ url_for('main.jobs') }}">Jobs</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                {% if session.authenticated %}
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Register</a>
+                {% endif %}
+            </div>
+        </nav>
+    </div>
+</header>
+
+<section class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1>Find Your Dream Job</h1>
+            <p>Connect with top employers and discover opportunities that match your skills and career goals.</p>
+            <div class="search-box">
+                <form action="{{ url_for('main.jobs') }}" method="GET">
+                    <input type="text" name="q" placeholder="Job title, keywords, or company" class="form-control">
+                    <input type="text" name="location" placeholder="Location" class="form-control">
+                    <button type="submit" class="btn btn-primary">Search Jobs</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">Why Choose Us</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>Smart Job Matching</h3>
+                <p>Our AI-powered system matches you with jobs that fit your skills and experience.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h3>Resume Builder</h3>
+                <p>Create professional resumes that stand out to employers.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <h3>Career Resources</h3>
+                <p>Access guides, tips, and tools to advance your career.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Application Tracking</h3>
+                <p>Monitor your job applications and interview status in one place.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="job-categories">
+    <div class="container">
+        <h2 class="section-title">Popular Job Categories</h2>
+        <div class="category-grid">
+            <a href="{{ url_for('main.jobs', category='technology') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-laptop-code"></i>
+                </div>
+                <h3>Technology</h3>
+                <p>1,200+ jobs</p>
+            </a>
+            <a href="{{ url_for('main.jobs', category='finance') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3>Finance</h3>
+                <p>850+ jobs</p>
+            </a>
+            <a href="{{ url_for('main.jobs', category='healthcare') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h3>Healthcare</h3>
+                <p>950+ jobs</p>
+            </a>
+            <a href="{{ url_for('main.jobs', category='education') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h3>Education</h3>
+                <p>600+ jobs</p>
+            </a>
+            <a href="{{ url_for('main.jobs', category='marketing') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <h3>Marketing</h3>
+                <p>750+ jobs</p>
+            </a>
+            <a href="{{ url_for('main.jobs', category='design') }}" class="category-card">
+                <div class="category-icon">
+                    <i class="fas fa-paint-brush"></i>
+                </div>
+                <h3>Design</h3>
+                <p>500+ jobs</p>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="featured-jobs">
+    <div class="container">
+        <h2 class="section-title">Featured Jobs</h2>
+        <div class="jobs-container">
+            <div class="job-card">
+                <h3>Senior Software Engineer</h3>
+                <div class="company">Acme Corporation</div>
+                <div class="details">
+                    <p><strong>Location:</strong> New York, NY</p>
+                    <p><strong>Salary:</strong> $120,000 - $150,000</p>
+                    <p><strong>Type:</strong> Full-time</p>
+                </div>
+                <div class="actions">
+                    <a href="#" class="btn btn-secondary">View Details</a>
+                    <a href="#" class="btn btn-primary">Apply</a>
+                </div>
+            </div>
+            
+            <div class="job-card">
+                <h3>Full Stack Developer</h3>
+                <div class="company">Tech Innovations Inc.</div>
+                <div class="details">
+                    <p><strong>Location:</strong> Remote</p>
+                    <p><strong>Salary:</strong> $100,000 - $130,000</p>
+                    <p><strong>Type:</strong> Full-time</p>
+                </div>
+                <div class="actions">
+                    <a href="#" class="btn btn-secondary">View Details</a>
+                    <a href="#" class="btn btn-primary">Apply</a>
+                </div>
+            </div>
+            
+            <div class="job-card">
+                <h3>DevOps Engineer</h3>
+                <div class="company">Cloud Solutions Ltd.</div>
+                <div class="details">
+                    <p><strong>Location:</strong> San Francisco, CA</p>
+                    <p><strong>Salary:</strong> $130,000 - $160,000</p>
+                    <p><strong>Type:</strong> Full-time</p>
+                </div>
+                <div class="actions">
+                    <a href="#" class="btn btn-secondary">View Details</a>
+                    <a href="#" class="btn btn-primary">Apply</a>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <a href="{{ url_for('main.jobs') }}" class="btn btn-primary">View All Jobs</a>
+        </div>
+    </div>
+</section>
+
+<section class="testimonials">
+    <div class="container">
+        <h2 class="section-title">What Our Users Say</h2>
+        <div class="testimonial-slider">
+            <div class="testimonial">
+                <div class="testimonial-content">
+                    <p>"I found my dream job within two weeks of using this platform. The job matching algorithm is incredibly accurate!"</p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{{ url_for('static', filename='img/avatar1.jpg') }}" alt="User Avatar">
+                    </div>
+                    <div class="author-info">
+                        <h4>John Smith</h4>
+                        <p>Software Developer</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial">
+                <div class="testimonial-content">
+                    <p>"As an HR manager, this platform has streamlined our recruitment process. We've found amazing talent quickly and efficiently."</p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{{ url_for('static', filename='img/avatar2.jpg') }}" alt="User Avatar">
+                    </div>
+                    <div class="author-info">
+                        <h4>Sarah Johnson</h4>
+                        <p>HR Director</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="main-footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h3>Job Application Agent</h3>
+                <p>Connecting talent with opportunity.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>For Job Seekers</h4>
+                <ul>
+                    <li><a href="#">Browse Jobs</a></li>
+                    <li><a href="#">Career Resources</a></li>
+                    <li><a href="#">Resume Builder</a></li>
+                    <li><a href="#">Job Alerts</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>For Employers</h4>
+                <ul>
+                    <li><a href="#">Post a Job</a></li>
+                    <li><a href="#">Browse Candidates</a></li>
+                    <li><a href="#">Recruitment Solutions</a></li>
+                    <li><a href="#">Pricing</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact Us</h4>
+                <ul class="contact-info">
+                    <li><i class="fas fa-map-marker-alt"></i> 123 Main Street, City, Country</li>
+                    <li><i class="fas fa-phone"></i> +1 234 567 890</li>
+                    <li><i class="fas fa-envelope"></i> info@jobagent.com</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Job Application Agent. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookies Policy</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+    /* Additional styles for the landing page */
+    .main-header {
+        background-color: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 1rem 0;
+        position: fixed;
+        width: 100%;
+        top: 0;
+        z-index: 1000;
+    }
+    
+    .main-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .logo h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+    }
+    
+    .nav-links {
+        display: flex;
+        align-items: center;
+    }
+    
+    .nav-links a {
+        margin-left: 1.5rem;
+        color: var(--dark-color);
+    }
+    
+    .hero {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 8rem 0 4rem;
+        text-align: center;
+    }
+    
+    .hero-content h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .hero-content p {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .search-box {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+    }
+    
+    .search-box form {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .section-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-size: 2rem;
+    }
+    
+    .features {
+        padding: 4rem 0;
+        background-color: white;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+    
+    .feature-card {
+        text-align: center;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+    }
+    
+    .job-categories {
+        padding: 4rem 0;
+        background-color: var(--light-color);
+    }
+    
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .category-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        transition: transform 0.3s;
+        color: var(--dark-color);
+        text-decoration: none;
+    }
+    
+    .category-card:hover {
+        transform: translateY(-5px);
+        text-decoration: none;
+    }
+    
+    .category-icon {
+        font-size: 2rem;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+    }
+    
+    .featured-jobs {
+        padding: 4rem 0;
+        background-color: white;
+    }
+    
+    .testimonials {
+        padding: 4rem 0;
+        background-color: var(--light-color);
+    }
+    
+    .testimonial {
+        background-color: white;
+        border-radius: 8px;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        margin: 0 1rem;
+    }
+    
+    .testimonial-content {
+        font-style: italic;
+        margin-bottom: 1.5rem;
+    }
+    
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+    }
+    
+    .author-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-right: 1rem;
+    }
+    
+    .author-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .author-info h4 {
+        margin: 0;
+        font-size: 1rem;
+    }
+    
+    .author-info p {
+        margin: 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .main-footer {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 4rem 0 1rem;
+    }
+    
+    .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .footer-col h3, .footer-col h4 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .footer-col ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .footer-col ul li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .footer-col a {
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+    }
+    
+    .footer-col a:hover {
+        color: white;
+        text-decoration: underline;
+    }
+    
+    .social-links {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .social-links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: background-color 0.3s;
+    }
+    
+    .social-links a:hover {
+        background-color: var(--primary-color);
+    }
+    
+    .contact-info li {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .contact-info li i {
+        margin-right: 0.5rem;
+    }
+    
+    .footer-bottom {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .footer-links a {
+        color: rgba(255, 255, 255, 0.8);
+        margin-left: 1.5rem;
+        text-decoration: none;
+    }
+    
+    .footer-links a:hover {
+        color: white;
+        text-decoration: underline;
+    }
+    
+    @media (max-width: 768px) {
+        .search-box form {
+            flex-direction: column;
+        }
+        
+        .footer-bottom {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .footer-links {
+            margin-top: 1rem;
+        }
+        
+        .footer-links a {
+            margin: 0 0.75rem;
+        }
+    }
+</style>
+{% endblock %}

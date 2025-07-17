@@ -7,8 +7,9 @@ vulnerabilities such as XSS, CSRF, clickjacking, and more.
 import re
 from functools import wraps
 from typing import Callable, Dict, Any, List, Optional
-from flask import request, abort, current_app, g
+from flask import request, abort, current_app, g, session, redirect, url_for, flash
 from services.security_audit_service import security_audit_service
+from services.auth_service import auth_service
 from utils.input_sanitizer import sanitize_string
 
 
@@ -278,6 +279,64 @@ def prevent_parameter_pollution() -> Callable:
                         'message': "Duplicate query parameters are not allowed"
                     }
                 }, 400
+            
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    
+    return decorator
+
+
+def require_auth(f: Callable) -> Callable:
+    """Decorator to require authentication for a route.
+    
+    Returns:
+        Callable: The decorated function
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if user is authenticated
+        if not session.get('authenticated'):
+            flash('Please log in to access this page', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Set user ID in request context
+        g.user_id = session.get('user_id')
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+
+def require_role(role: str) -> Callable:
+    """Decorator to require a specific role for a route.
+    
+    Args:
+        role: Required role name
+        
+    Returns:
+        Callable: The decorator function
+    """
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user ID is in request context
+            if not hasattr(g, 'user_id'):
+                flash('Please log in to access this page', 'error')
+                return redirect(url_for('auth.login'))
+            
+            # Get user roles
+            user_roles = auth_service.get_user_roles(g.user_id)
+            
+            # Check if user has the required role
+            if role not in user_roles:
+                security_audit_service.log_security_event(
+                    event_type='role_access_denied',
+                    description=f"User {g.user_id} attempted to access {request.path} without {role} role",
+                    severity='warning'
+                )
+                flash('You do not have permission to access this page', 'error')
+                return redirect(url_for('main.index'))
             
             return f(*args, **kwargs)
         

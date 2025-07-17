@@ -23,6 +23,10 @@ from services.logging_service import logging_service
 from services.monitoring_service import monitoring_service
 from services.notification_service import notification_service
 from services.security_audit_service import security_audit_service
+from services.otp_service import otp_service
+from services.recommendation_service import recommendation_service
+from services.resume_parser_service import resume_parser_service
+from services.analytics_service import analytics_service
 
 
 def create_app(config_name='Config'):
@@ -117,13 +121,35 @@ def create_app(config_name='Config'):
     # Initialize monitoring service
     monitoring_service.init_app(app)
     
+    # Initialize OTP service
+    otp_service.init_app(app)
+    
+    # Initialize recommendation service
+    recommendation_service.init_app(app)
+    
+    # Initialize resume parser service
+    resume_parser_service.init_app(app)
+    
+    # Initialize analytics service
+    analytics_service.init_app(app)
+    
     # Register error handlers
     register_error_handlers(app)
+    
+    # Import role-based blueprints
+    from api.user_routes import user_bp
+    from api.hr_routes import hr_bp
+    from api.admin_routes import admin_bp
+    from api.student_routes import student_bp
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)
+    app.register_blueprint(user_bp)
+    app.register_blueprint(hr_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(student_bp)
     
     # Apply rate limiting to API endpoints
     apply_default_rate_limits(app)
@@ -147,7 +173,7 @@ def create_app(config_name='Config'):
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
         # Set Content Security Policy
-        csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
+        csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
         response.headers['Content-Security-Policy'] = csp
         
         # Set referrer policy

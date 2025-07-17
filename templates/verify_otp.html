@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Email - Job Application Agent{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Verify Your Email</h1>
+        <p>We've sent a verification code to <strong>{{ email }}</strong></p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <form class="auth-form" method="POST" action="{{ url_for('auth.verify_otp') }}">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+        
+        <div class="form-group">
+            <label for="otp">Verification Code</label>
+            <input type="text" id="otp" name="otp" class="form-control" style="letter-spacing: 0.5rem; font-size: 1.5rem; text-align: center;" maxlength="6" placeholder="------" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Verify</button>
+        
+        <div class="d-flex justify-content-center mt-3">
+            <button type="button" id="resendBtn" class="btn btn-secondary" disabled>Resend Code</button>
+            <span id="countdown" class="ml-2" style="font-weight: bold;">60s</span>
+        </div>
+    </form>
+    
+    <div class="auth-footer">
+        <p>Didn't receive the code? Check your spam folder.</p>
+        <p><a href="{{ url_for('auth.register') }}">Start Over</a></p>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Countdown timer for resend button
+    let countdown = 60;
+    const countdownElement = document.getElementById('countdown');
+    const resendBtn = document.getElementById('resendBtn');
+    
+    function updateCountdown() {
+        countdown--;
+        countdownElement.textContent = countdown + 's';
+        
+        if (countdown <= 0) {
+            clearInterval(timer);
+            countdownElement.style.display = 'none';
+            resendBtn.disabled = false;
+        }
+    }
+    
+    let timer = setInterval(updateCountdown, 1000);
+    
+    // Handle resend button click
+    resendBtn.addEventListener('click', function() {
+        resendBtn.disabled = true;
+        countdownElement.style.display = 'inline';
+        countdown = 60;
+        countdownElement.textContent = countdown + 's';
+        timer = setInterval(updateCountdown, 1000);
+        
+        // Send AJAX request to resend OTP
+        fetch('{{ url_for("auth.resend_otp") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ session.csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Verification code resent successfully!');
+            } else {
+                alert('Error: ' + data.message);
+                clearInterval(timer);
+                countdownElement.style.display = 'none';
+                resendBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert('Error sending request. Please try again.');
+            clearInterval(timer);
+            countdownElement.style.display = 'none';
+            resendBtn.disabled = false;
+        });
+    });
+    
+    // Format OTP input
+    const otpInput = document.getElementById('otp');
+    otpInput.addEventListener('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+</script>
+{% endblock %}
+{% endblock %}
