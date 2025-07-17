@@ -11,3 +11,4 @@ from api import routes
 from api import profile_routes
 from api import job_routes
 from api import application_routes
+from api import settings_routes

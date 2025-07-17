@@ -1,14 +1,20 @@
 """
 Main Flask application entry point for the Job Application Agent.
 """
+import os
+import logging
 from flask import Flask
 from config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
 from api import api_bp
+from api.error_handlers import register_error_handlers
 from routes import main_bp
 from models.database import init_db
 from models.migrations import migration_manager
 from services.encryption_service import encryption_service
 from services.auth_service import auth_service
+from services.logging_service import logging_service
+from services.monitoring_service import monitoring_service
+from services.notification_service import notification_service
 
 
 def create_app(config_name='Config'):
@@ -31,6 +37,9 @@ def create_app(config_name='Config'):
     # Initialize configuration-specific settings
     config_class.init_app(app)
     
+    # Initialize logging service first
+    logging_service.init_app(app)
+    
     # Initialize database
     init_db(app)
     
@@ -42,6 +51,15 @@ def create_app(config_name='Config'):
     
     # Initialize authentication service
     auth_service.init_app(app)
+    
+    # Initialize notification service
+    notification_service.init_app(app)
+    
+    # Initialize monitoring service
+    monitoring_service.init_app(app)
+    
+    # Register error handlers
+    register_error_handlers(app)
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')

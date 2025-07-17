@@ -2,13 +2,123 @@
 
 {% block title %}Dashboard - Job Application Agent{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-container">
     <h2>Application Dashboard</h2>
-    <p>Welcome to your Job Application Agent dashboard. This page will be implemented in a future task.</p>
+    
+    <div class="dashboard-summary">
+        <div class="summary-card total-applications">
+            <div class="card-value" id="total-applications">0</div>
+            <div class="card-label">Total Applications</div>
+        </div>
+        <div class="summary-card pending-applications">
+            <div class="card-value" id="pending-applications">0</div>
+            <div class="card-label">Pending</div>
+        </div>
+        <div class="summary-card submitted-applications">
+            <div class="card-value" id="submitted-applications">0</div>
+            <div class="card-label">Submitted</div>
+        </div>
+        <div class="summary-card interview-applications">
+            <div class="card-value" id="interview-applications">0</div>
+            <div class="card-label">Interviews</div>
+        </div>
+        <div class="summary-card accepted-applications">
+            <div class="card-value" id="accepted-applications">0</div>
+            <div class="card-label">Accepted</div>
+        </div>
+    </div>
+    
+    <div class="dashboard-filters">
+        <div class="filter-group">
+            <label for="status-filter">Status:</label>
+            <select id="status-filter">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="submitted">Submitted</option>
+                <option value="in_review">In Review</option>
+                <option value="interview_scheduled">Interview Scheduled</option>
+                <option value="rejected">Rejected</option>
+                <option value="accepted">Accepted</option>
+                <option value="withdrawn">Withdrawn</option>
+                <option value="failed">Failed</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="date-filter">Date Range:</label>
+            <select id="date-filter">
+                <option value="all">All Time</option>
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="active-filter">Show:</label>
+            <select id="active-filter">
+                <option value="true">Active Only</option>
+                <option value="false">All Applications</option>
+            </select>
+        </div>
+        
+        <button id="refresh-applications" class="btn btn-sm btn-secondary">
+            <span class="icon">↻</span> Refresh
+        </button>
+    </div>
+    
+    <div class="applications-container">
+        <div class="applications-header">
+            <div class="header-cell">Company</div>
+            <div class="header-cell">Position</div>
+            <div class="header-cell">Status</div>
+            <div class="header-cell">Date</div>
+            <div class="header-cell">Actions</div>
+        </div>
+        
+        <div id="applications-list" class="applications-list">
+            <!-- Applications will be loaded here via JavaScript -->
+            <div class="loading-indicator">Loading applications...</div>
+        </div>
+        
+        <div class="pagination">
+            <button id="prev-page" class="btn btn-sm" disabled>Previous</button>
+            <span id="page-info">Page 1</span>
+            <button id="next-page" class="btn btn-sm">Next</button>
+        </div>
+    </div>
     
     <div class="dashboard-actions">
-        <a href="{{ url_for('profile') }}" class="btn btn-primary">Manage Profile</a>
+        <a href="{{ url_for('jobs') }}" class="btn btn-primary">Find Jobs</a>
+        <a href="{{ url_for('applications') }}" class="btn btn-secondary">Manage Applications</a>
     </div>
 </div>
+
+<!-- Application Details Modal -->
+<div id="application-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title">Application Details</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="application-details">
+                <!-- Application details will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="retry-application" class="btn btn-primary">Retry Application</button>
+            <button id="close-modal" class="btn">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

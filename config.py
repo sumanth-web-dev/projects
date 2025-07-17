@@ -52,6 +52,30 @@ class Config:
     
     # Rate limiting settings
     RATELIMIT_STORAGE_URL = "memory://"
+    
+    # Logging settings
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+    CONSOLE_LOGGING = True
+    FILE_LOGGING = True
+    JSON_LOGGING = True
+    LOG_BACKUP_COUNT = 10
+    MAX_LOG_SIZE = 10 * 1024 * 1024  # 10 MB
+    
+    # Monitoring settings
+    MONITORING_ENABLED = True
+    METRICS_INTERVAL = 60  # seconds
+    METRICS_RETENTION_DAYS = 7  # days
+    ALERT_THRESHOLDS = {
+        'cpu_usage': 80.0,  # percentage
+        'memory_usage': 80.0,  # percentage
+        'disk_usage': 80.0,  # percentage
+        'error_rate': 5.0,  # percentage
+        'response_time': 1000.0  # milliseconds
+    }
+    
+    # Admin settings
+    ADMIN_USER_ID = os.environ.get('ADMIN_USER_ID')
 
 
 class DevelopmentConfig(Config):
