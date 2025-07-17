@@ -7,6 +7,7 @@ from api import api_bp
 from models.database import init_db
 from models.migrations import migration_manager
 from services.encryption_service import encryption_service
+from services.auth_service import auth_service
 
 
 def create_app(config_class=Config):
@@ -26,6 +27,9 @@ def create_app(config_class=Config):
     
     # Initialize encryption service
     encryption_service.init_app(app)
+    
+    # Initialize authentication service
+    auth_service.init_app(app)
     
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')

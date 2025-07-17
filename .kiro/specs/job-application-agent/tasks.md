@@ -101,7 +101,10 @@
   - Add unit tests for encryption functionality
   - _Requirements: 5.2, 6.1, 6.3_
 
-- [-] 3.2 Implement authentication and session management
+- [ ] 3.2 Implement authentication and session management
+
+
+
 
 
 
@@ -111,8 +114,11 @@
   - Write authentication middleware for Flask routes
   - _Requirements: 5.2, 6.1_
 
-- [ ] 4. Build core backend services
-- [ ] 4.1 Implement Profile Management Service
+- [-] 4. Build core backend services
+
+
+- [-] 4.1 Implement Profile Management Service
+
   - Create ProfileService class with CRUD operations
   - Add profile validation and data sanitization
   - Implement multiple resume/cover letter template management
