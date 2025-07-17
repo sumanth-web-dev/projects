@@ -8,13 +8,17 @@ import os
 import json
 import logging
 import time
+import random
 from typing import Dict, List, Optional, Tuple, Any, Union
+from urllib.parse import urlparse
 from playwright.sync_api import Page, Browser, BrowserContext
 
 from automation.playwright_engine.browser_manager import browser_manager
 from automation.playwright_engine.interaction_handler import interaction_handler
 from automation.playwright_engine.screenshot_manager import screenshot_manager
 from automation.playwright_engine.error_handler import error_handler, AutomationError
+from automation.playwright_engine.rate_limiter import rate_limiter
+from automation.playwright_engine.anti_detection import anti_detection
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -135,6 +139,13 @@ class WebsiteAdapter:
         self._logged_in = False
         self._last_request_time = 0
         
+        # Extract domain for rate limiting
+        parsed_url = urlparse(self.base_url)
+        self._domain = parsed_url.netloc or self.name
+        
+        # Set domain-specific rate limit delay
+        rate_limiter.set_domain_delay(self._domain, self.rate_limit_delay)
+        
         if app is not None:
             self.init_app(app)
     
@@ -209,7 +220,12 @@ class WebsiteAdapter:
             
             # Check for rate limiting
             if error_handler.detect_rate_limiting(page):
+                # If rate limiting is detected, set a cooldown period
+                rate_limiter.set_cooldown(self._domain, 60)  # 1 minute cooldown
                 raise AutomationError("Rate limiting detected", "rate_limit", True)
+            
+            # Apply anti-detection measures after page load
+            self._apply_anti_detection_measures(page)
             
             # Take screenshot for debugging
             screenshot_manager.take_screenshot(page, f"{self.name}_navigate")
@@ -297,13 +313,34 @@ class WebsiteAdapter:
             self._logged_in = False
     
     def _apply_rate_limiting(self) -> None:
-        """Apply rate limiting between requests."""
-        current_time = time.time() * 1000  # Convert to ms
-        elapsed = current_time - self._last_request_time
-        
-        if elapsed < self.rate_limit_delay:
-            delay = self.rate_limit_delay - elapsed
-            logger.debug(f"Rate limiting: waiting {delay}ms")
-            time.sleep(delay / 1000)
-        
+        """Apply rate limiting between requests using the rate limiter."""
+        # Use the rate limiter to control request frequency
+        rate_limiter.wait(self._domain)
         self._last_request_time = time.time() * 1000
+        
+    def _apply_anti_detection_measures(self, page: Page) -> None:
+        """Apply anti-detection measures to the page.
+        
+        Args:
+            page: Playwright page
+        """
+        try:
+            # Simulate human behavior
+            anti_detection.simulate_human_behavior(page)
+            
+            # Add random delays between actions
+            self._add_random_delay()
+            
+            logger.debug(f"Applied anti-detection measures for {self.name}")
+        except Exception as e:
+            logger.error(f"Error applying anti-detection measures: {str(e)}")
+    
+    def _add_random_delay(self, min_ms: int = 500, max_ms: int = 2000) -> None:
+        """Add a random delay to simulate human behavior.
+        
+        Args:
+            min_ms: Minimum delay in milliseconds
+            max_ms: Maximum delay in milliseconds
+        """
+        delay = random.randint(min_ms, max_ms)
+        time.sleep(delay / 1000)

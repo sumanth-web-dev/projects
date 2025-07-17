@@ -132,9 +132,14 @@ class BrowserManager:
             return self._contexts[context_name]
         
         try:
+            # Get a random user agent from anti_detection module if not provided
+            if user_agent is None:
+                from automation.playwright_engine.anti_detection import anti_detection
+                user_agent = anti_detection.rotate_user_agent()
+            
             # Set up context options with anti-detection measures
             context_options = {
-                "user_agent": user_agent or self._get_random_user_agent(),
+                "user_agent": user_agent,
                 "viewport": viewport or {"width": 1920, "height": 1080},
                 "locale": locale or "en-US",
                 "timezone_id": "America/New_York",
@@ -149,8 +154,10 @@ class BrowserManager:
             # Create the context
             context = self._browser.new_context(**context_options)
             
-            # Apply additional anti-detection measures
-            self._apply_anti_detection_measures(context)
+            # Apply anti-detection measures using our dedicated module
+            from automation.playwright_engine.anti_detection import anti_detection
+            anti_detection.apply_evasion_techniques(context)
+            anti_detection.add_browser_fingerprint_noise(context)
             
             # Store the context
             self._contexts[context_name] = context
