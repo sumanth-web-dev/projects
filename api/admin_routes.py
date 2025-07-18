@@ -464,8 +464,7 @@ def job_categories():
     ]
     
     return render_template('admin/job_categories.html', categories=categories)
-# 
-Additional admin endpoints for complete functionality
+# Additional admin endpoints for complete functionality
 
 @admin_bp.route('/backup/<backup_id>/restore', methods=['POST'])
 def restore_backup(backup_id):

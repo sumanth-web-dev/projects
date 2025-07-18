@@ -1,758 +1,672 @@
 """
-Profile management service for handling user profiles and application materials.
-
-This module provides functionality for managing user profiles, including personal information,
-job preferences, resumes, and cover letters. It handles CRUD operations, validation,
-and template management.
+Profile service for managing user profiles and profile completion.
 """
-import os
-import uuid
-import logging
 import datetime
-from typing import Dict, List, Optional, Tuple, Any, Union
-from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.utils import secure_filename
-from models.database import db
-from services.encryption_service import encryption_service
-
-# Set up logging
-logger = logging.getLogger(__name__)
+from typing import Dict, List, Optional
 
 
 class ProfileService:
-    """Service for managing user profiles and application materials."""
-    
-    def __init__(self, app=None):
-        """Initialize the profile service.
-        
-        Args:
-            app: Flask application instance for configuration
-        """
-        self.app = app
-        self._upload_folder = None
-        
-        if app is not None:
-            self.init_app(app)
+    """Service for managing user profiles."""
     
     def init_app(self, app):
-        """Initialize the profile service with a Flask app.
-        
-        Args:
-            app: Flask application instance
-        """
-        self.app = app
-        self._upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
-        
-        # Ensure upload directory exists
-        os.makedirs(os.path.join(self._upload_folder, 'resumes'), exist_ok=True)
-        os.makedirs(os.path.join(self._upload_folder, 'cover_letters'), exist_ok=True)
+        """Initialize the profile service with the Flask app."""
+        # No initialization needed for now
+        pass
     
-    def get_user_by_id(self, user_id: str) -> Optional["User"]:
-        """Get a user by ID.
-        
-        Args:
-            user_id: The user ID to look up
-            
-        Returns:
-            Optional[User]: The user if found, None otherwise
-        """
+    def update_profile(self, user_id: str, profile_data: Dict) -> bool:
+        """Update user profile with new data."""
         try:
-            # Import User here to avoid circular imports
             from models.user import User
-            return User.query.get(user_id)
+            from models.database import db
+            
+            user = User.query.get(user_id)
+            if not user:
+                return False
+            
+            # Get existing personal data
+            personal_data = user.personal_data or {}
+            
+            # Update with new data
+            personal_data.update(profile_data)
+            
+            # Save updated data
+            user.personal_data = personal_data
+            user.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+            
+            return True
+        
         except Exception as e:
-            logger.error(f"Error retrieving user: {str(e)}")
+            db.session.rollback()
+            return False
+    
+    def autosave_profile(self, user_id: str, profile_data: Dict) -> bool:
+        """Auto-save profile data (lightweight update)."""
+        try:
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
+            if not user:
+                return False
+            
+            # Get existing personal data
+            personal_data = user.personal_data or {}
+            
+            # Update only provided fields
+            for key, value in profile_data.items():
+                if value is not None:
+                    personal_data[key] = value
+            
+            # Save updated data
+            user.personal_data = personal_data
+            db.session.commit()
+            
+            return True
+        
+        except Exception as e:
+            db.session.rollback()
+            return False
+    
+    def calculate_profile_completion(self, user_id: str) -> int:
+        """Calculate profile completion percentage."""
+        try:
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return 0
+            
+            personal_data = user.personal_data or {}
+            
+            # Define required fields and their weights
+            completion_criteria = {
+                'basic_info': {
+                    'weight': 25,
+                    'fields': ['first_name', 'last_name', 'phone']
+                },
+                'education': {
+                    'weight': 25,
+                    'fields': ['education']
+                },
+                'skills': {
+                    'weight': 20,
+                    'fields': ['skills']
+                },
+                'experience': {
+                    'weight': 15,
+                    'fields': ['experience']
+                },
+                'bio': {
+                    'weight': 10,
+                    'fields': ['bio']
+                },
+                'social_links': {
+                    'weight': 5,
+                    'fields': ['social_links']
+                }
+            }
+            
+            total_score = 0
+            
+            for category, criteria in completion_criteria.items():
+                category_complete = True
+                
+                for field in criteria['fields']:
+                    if field not in personal_data or not personal_data[field]:
+                        category_complete = False
+                        break
+                    
+                    # Special handling for complex fields
+                    if field == 'education' and isinstance(personal_data[field], list):
+                        if len(personal_data[field]) == 0:
+                            category_complete = False
+                    elif field == 'skills' and isinstance(personal_data[field], list):
+                        if len(personal_data[field]) == 0:
+                            category_complete = False
+                    elif field == 'social_links' and isinstance(personal_data[field], dict):
+                        if not any(personal_data[field].values()):
+                            category_complete = False
+                
+                if category_complete:
+                    total_score += criteria['weight']
+            
+            return min(total_score, 100)
+        
+        except Exception as e:
+            return 0
+    
+    def get_profile_completion_status(self, user_id: str) -> Dict:
+        """Get detailed profile completion status."""
+        try:
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return {}
+            
+            personal_data = user.personal_data or {}
+            
+            return {
+                'basic_info': bool(personal_data.get('first_name') and personal_data.get('last_name')),
+                'education': bool(personal_data.get('education') and len(personal_data.get('education', [])) > 0),
+                'skills': bool(personal_data.get('skills') and len(personal_data.get('skills', [])) > 0),
+                'resume': bool(personal_data.get('resume_path')),
+                'projects': bool(personal_data.get('projects') and len(personal_data.get('projects', [])) > 0),
+                'experience': bool(personal_data.get('experience') and len(personal_data.get('experience', [])) > 0)
+            }
+        
+        except Exception as e:
+            return {}
+    
+    def get_profile_suggestions(self, user_id: str) -> List[str]:
+        """Get suggestions for improving profile."""
+        try:
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return []
+            
+            personal_data = user.personal_data or {}
+            suggestions = []
+            
+            if not personal_data.get('bio'):
+                suggestions.append("Add a professional summary to showcase your strengths")
+            
+            if not personal_data.get('skills') or len(personal_data.get('skills', [])) < 5:
+                suggestions.append("Add more skills to improve job matching")
+            
+            if not personal_data.get('projects') or len(personal_data.get('projects', [])) == 0:
+                suggestions.append("Add projects to demonstrate your experience")
+            
+            if not personal_data.get('social_links', {}).get('linkedin'):
+                suggestions.append("Add your LinkedIn profile to increase visibility")
+            
+            if not personal_data.get('experience') or len(personal_data.get('experience', [])) == 0:
+                suggestions.append("Add work experience to strengthen your profile")
+            
+            return suggestions
+        
+        except Exception as e:
+            return []
+    
+    def export_profile(self, user_id: str, format_type: str = 'json') -> Optional[str]:
+        """Export user profile data."""
+        try:
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return None
+            
+            profile_data = {
+                'basic_info': {
+                    'email': user.email,
+                    'created_at': user.created_at.isoformat() if user.created_at else None,
+                    'updated_at': user.updated_at.isoformat() if user.updated_at else None
+                },
+                'personal_data': user.personal_data or {},
+                'preferences': user.preferences or {}
+            }
+            
+            if format_type == 'json':
+                import json
+                return json.dumps(profile_data, indent=2)
+            elif format_type == 'csv':
+                # Implement CSV export if needed
+                pass
+            
+            return None
+        
+        except Exception as e:
             return None
     
-    def get_user_by_email(self, email: str) -> Optional["User"]:
-        """Get a user by email.
-        
-        Args:
-            email: The email to look up
-            
-        Returns:
-            Optional[User]: The user if found, None otherwise
-        """
+    def get_profile(self, user_id: str) -> tuple[bool, Dict, str]:
+        """Get complete user profile."""
         try:
-            # Import User here to avoid circular imports
             from models.user import User
-            return User.query.filter_by(email=email.lower()).first()
-        except Exception as e:
-            logger.error(f"Error retrieving user by email: {str(e)}")
-            return None
-    
-    def get_profile(self, user_id: str) -> Tuple[bool, Dict, str]:
-        """Get a user's profile data.
-        
-        Args:
-            user_id: The user ID
             
-        Returns:
-            Tuple[bool, Dict, str]: (success, profile_data, message)
-        """
-        try:
-            user = self.get_user_by_id(user_id)
+            user = User.query.get(user_id)
             if not user:
                 return False, {}, "User not found"
             
-            # Get user data including sensitive information
-            profile_data = user.to_dict(include_sensitive=True)
-            
-            # Add additional profile information
-            profile_data['resumes'] = self.get_resume_list(user_id)
-            profile_data['cover_letters'] = self.get_cover_letter_list(user_id)
+            profile_data = {
+                'basic_info': {
+                    'email': user.email,
+                    'created_at': user.created_at.isoformat() if user.created_at else None,
+                    'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+                    'is_active': user.is_active
+                },
+                'personal_data': user.personal_data or {},
+                'preferences': user.preferences or {},
+                'profile_completion': self.calculate_profile_completion(user_id)
+            }
             
             return True, profile_data, "Profile retrieved successfully"
+        
         except Exception as e:
-            logger.error(f"Error retrieving profile: {str(e)}")
             return False, {}, f"Error retrieving profile: {str(e)}"
     
-    def update_personal_info(self, user_id: str, personal_info: Dict) -> Tuple[bool, str]:
-        """Update a user's personal information.
-        
-        Args:
-            user_id: The user ID
-            personal_info: Dictionary of personal information
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+    def update_personal_info(self, user_id: str, personal_info: Dict) -> tuple[bool, str]:
+        """Update personal information."""
         try:
-            user = self.get_user_by_id(user_id)
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Get current personal data
-            current_data = user.personal_data
+            # Get existing personal data
+            personal_data = user.personal_data or {}
             
-            # Sanitize input data
-            sanitized_data = self._sanitize_personal_info(personal_info)
+            # Update with new personal info
+            personal_data.update(personal_info)
             
-            # Merge with existing data, preserving password and other sensitive fields
-            for key, value in sanitized_data.items():
-                if key != 'password' and key != 'api_keys':  # Don't overwrite these fields
-                    current_data[key] = value
+            # Save updated data
+            user.personal_data = personal_data
+            user.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
             
-            # Validate and update
-            try:
-                user.validate_personal_data(current_data)
-                user.personal_data = current_data
-                db.session.commit()
-                return True, "Personal information updated successfully"
-            except ValueError as e:
-                db.session.rollback()
-                return False, str(e)
-            
+            return True, "Personal information updated successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating personal info: {str(e)}")
-            return False, f"Error updating personal info: {str(e)}"
+            return False, f"Error updating personal information: {str(e)}"
     
-    def update_preferences(self, user_id: str, preferences: Dict) -> Tuple[bool, str]:
-        """Update a user's job preferences.
-        
-        Args:
-            user_id: The user ID
-            preferences: Dictionary of job preferences
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+    def update_preferences(self, user_id: str, preferences: Dict) -> tuple[bool, str]:
+        """Update user preferences."""
         try:
-            user = self.get_user_by_id(user_id)
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Sanitize input data
-            sanitized_prefs = self._sanitize_preferences(preferences)
+            # Get existing preferences
+            current_preferences = user.preferences or {}
             
-            # Validate and update
-            try:
-                user.validate_preferences(sanitized_prefs)
-                user.preferences = sanitized_prefs
-                db.session.commit()
-                return True, "Job preferences updated successfully"
-            except ValueError as e:
-                db.session.rollback()
-                return False, str(e)
+            # Update with new preferences
+            current_preferences.update(preferences)
             
+            # Save updated preferences
+            user.preferences = current_preferences
+            user.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+            
+            return True, "Preferences updated successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating preferences: {str(e)}")
             return False, f"Error updating preferences: {str(e)}"
     
     def get_resume_list(self, user_id: str) -> List[Dict]:
-        """Get a list of user's resumes.
-        
-        Args:
-            user_id: The user ID
-            
-        Returns:
-            List[Dict]: List of resume metadata
-        """
+        """Get list of user's resumes."""
         try:
-            user = self.get_user_by_id(user_id)
+            from models.user import User
+            
+            user = User.query.get(user_id)
             if not user:
                 return []
             
-            personal_data = user.personal_data
+            personal_data = user.personal_data or {}
             resumes = personal_data.get('resumes', [])
             
-            # Ensure it's a list
-            if not isinstance(resumes, list):
-                return []
-            
             return resumes
+        
         except Exception as e:
-            logger.error(f"Error retrieving resume list: {str(e)}")
             return []
     
-    def get_cover_letter_list(self, user_id: str) -> List[Dict]:
-        """Get a list of user's cover letters.
-        
-        Args:
-            user_id: The user ID
-            
-        Returns:
-            List[Dict]: List of cover letter metadata
-        """
+    def add_resume(self, user_id: str, file_path: str, name: str, description: str) -> tuple[bool, str, str]:
+        """Add a resume to user profile."""
         try:
-            user = self.get_user_by_id(user_id)
+            import uuid
+            import os
+            import shutil
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
-                return []
+                return False, "", "User not found"
             
-            personal_data = user.personal_data
-            cover_letters = personal_data.get('cover_letters', [])
-            
-            # Ensure it's a list
-            if not isinstance(cover_letters, list):
-                return []
-            
-            return cover_letters
-        except Exception as e:
-            logger.error(f"Error retrieving cover letter list: {str(e)}")
-            return []
-    
-    def add_resume(self, user_id: str, file_path: str, name: str, description: str = None) -> Tuple[bool, Optional[str], str]:
-        """Add a resume to the user's profile.
-        
-        Args:
-            user_id: The user ID
-            file_path: Path to the resume file
-            name: Name for the resume
-            description: Optional description
-            
-        Returns:
-            Tuple[bool, Optional[str], str]: (success, resume_id, message)
-        """
-        try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return False, None, "User not found"
-            
-            # Generate a unique ID for this resume
+            # Generate unique ID for resume
             resume_id = str(uuid.uuid4())
             
+            # Create user's resume directory
+            resume_dir = os.path.join('uploads', 'resumes', user_id)
+            os.makedirs(resume_dir, exist_ok=True)
+            
             # Get file extension
-            _, ext = os.path.splitext(file_path)
+            file_ext = os.path.splitext(file_path)[1]
             
-            # Create a secure filename
-            filename = f"{user_id}_{resume_id}{ext}"
+            # Create permanent file path
+            permanent_path = os.path.join(resume_dir, f"{resume_id}{file_ext}")
             
-            # Destination path
-            dest_path = os.path.join(self._upload_folder, 'resumes', filename)
+            # Move file to permanent location
+            shutil.move(file_path, permanent_path)
             
-            # Copy file to destination
-            try:
-                with open(file_path, 'rb') as src_file:
-                    with open(dest_path, 'wb') as dest_file:
-                        dest_file.write(src_file.read())
-            except Exception as e:
-                return False, None, f"Error saving resume file: {str(e)}"
+            # Get existing personal data
+            personal_data = user.personal_data or {}
+            resumes = personal_data.get('resumes', [])
             
-            # Create resume metadata
+            # Add new resume
             resume_data = {
                 'id': resume_id,
                 'name': name,
-                'description': description or '',
-                'filename': filename,
-                'created_at': datetime.datetime.utcnow().isoformat(),
-                'updated_at': datetime.datetime.utcnow().isoformat()
+                'description': description,
+                'file_path': permanent_path,
+                'uploaded_at': datetime.datetime.utcnow().isoformat(),
+                'file_size': os.path.getsize(permanent_path)
             }
             
-            # Add to user's personal data
-            personal_data = user.personal_data
-            if 'resumes' not in personal_data:
-                personal_data['resumes'] = []
+            resumes.append(resume_data)
+            personal_data['resumes'] = resumes
             
-            personal_data['resumes'].append(resume_data)
+            # Save updated data
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, resume_id, "Resume added successfully"
             
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding resume: {str(e)}")
-            return False, None, f"Error adding resume: {str(e)}"
-    
-    def update_resume(self, user_id: str, resume_id: str, name: str = None, description: str = None) -> Tuple[bool, str]:
-        """Update resume metadata.
+            return True, resume_id, "Resume uploaded successfully"
         
-        Args:
-            user_id: The user ID
-            resume_id: The resume ID
-            name: New name (optional)
-            description: New description (optional)
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+        except Exception as e:
+            return False, "", f"Error uploading resume: {str(e)}"
+    
+    def get_resume_file_path(self, user_id: str, resume_id: str) -> tuple[bool, str, str]:
+        """Get resume file path."""
         try:
-            user = self.get_user_by_id(user_id)
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return False, "", "User not found"
+            
+            personal_data = user.personal_data or {}
+            resumes = personal_data.get('resumes', [])
+            
+            # Find resume by ID
+            resume = next((r for r in resumes if r.get('id') == resume_id), None)
+            
+            if not resume:
+                return False, "", "Resume not found"
+            
+            file_path = resume.get('file_path', '')
+            
+            if not file_path or not os.path.exists(file_path):
+                return False, "", "Resume file not found"
+            
+            return True, file_path, "Resume file found"
+        
+        except Exception as e:
+            return False, "", f"Error retrieving resume: {str(e)}"
+    
+    def update_resume(self, user_id: str, resume_id: str, name: str = None, description: str = None) -> tuple[bool, str]:
+        """Update resume metadata."""
+        try:
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Get personal data
-            personal_data = user.personal_data
-            
-            # Find the resume
+            personal_data = user.personal_data or {}
             resumes = personal_data.get('resumes', [])
-            resume_index = None
             
-            for i, resume in enumerate(resumes):
+            # Find and update resume
+            for resume in resumes:
                 if resume.get('id') == resume_id:
-                    resume_index = i
+                    if name is not None:
+                        resume['name'] = name
+                    if description is not None:
+                        resume['description'] = description
+                    resume['updated_at'] = datetime.datetime.utcnow().isoformat()
                     break
-            
-            if resume_index is None:
+            else:
                 return False, "Resume not found"
             
-            # Update fields
-            if name:
-                resumes[resume_index]['name'] = name
-            
-            if description is not None:
-                resumes[resume_index]['description'] = description
-            
-            resumes[resume_index]['updated_at'] = datetime.datetime.utcnow().isoformat()
-            
-            # Save changes
+            # Save updated data
             personal_data['resumes'] = resumes
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, "Resume updated successfully"
             
+            return True, "Resume updated successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating resume: {str(e)}")
             return False, f"Error updating resume: {str(e)}"
     
-    def delete_resume(self, user_id: str, resume_id: str) -> Tuple[bool, str]:
-        """Delete a resume.
-        
-        Args:
-            user_id: The user ID
-            resume_id: The resume ID
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+    def delete_resume(self, user_id: str, resume_id: str) -> tuple[bool, str]:
+        """Delete a resume."""
         try:
-            user = self.get_user_by_id(user_id)
+            import os
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Get personal data
-            personal_data = user.personal_data
-            
-            # Find the resume
+            personal_data = user.personal_data or {}
             resumes = personal_data.get('resumes', [])
-            resume_to_delete = None
             
+            # Find and remove resume
+            resume_to_delete = None
             for i, resume in enumerate(resumes):
                 if resume.get('id') == resume_id:
-                    resume_to_delete = resume
-                    resumes.pop(i)
+                    resume_to_delete = resumes.pop(i)
                     break
             
             if not resume_to_delete:
                 return False, "Resume not found"
             
-            # Delete the file
-            try:
-                filename = resume_to_delete.get('filename')
-                if filename:
-                    file_path = os.path.join(self._upload_folder, 'resumes', filename)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-            except Exception as e:
-                logger.warning(f"Error deleting resume file: {str(e)}")
-                # Continue even if file deletion fails
+            # Delete file
+            file_path = resume_to_delete.get('file_path', '')
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass  # Ignore file deletion errors
             
-            # Save changes
+            # Save updated data
             personal_data['resumes'] = resumes
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, "Resume deleted successfully"
             
+            return True, "Resume deleted successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deleting resume: {str(e)}")
             return False, f"Error deleting resume: {str(e)}"
     
-    def add_cover_letter(self, user_id: str, file_path: str, name: str, description: str = None) -> Tuple[bool, Optional[str], str]:
-        """Add a cover letter to the user's profile.
-        
-        Args:
-            user_id: The user ID
-            file_path: Path to the cover letter file
-            name: Name for the cover letter
-            description: Optional description
-            
-        Returns:
-            Tuple[bool, Optional[str], str]: (success, cover_letter_id, message)
-        """
+    def get_cover_letter_list(self, user_id: str) -> List[Dict]:
+        """Get list of user's cover letters."""
         try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return False, None, "User not found"
+            from models.user import User
             
-            # Generate a unique ID for this cover letter
+            user = User.query.get(user_id)
+            if not user:
+                return []
+            
+            personal_data = user.personal_data or {}
+            cover_letters = personal_data.get('cover_letters', [])
+            
+            return cover_letters
+        
+        except Exception as e:
+            return []
+    
+    def add_cover_letter(self, user_id: str, file_path: str, name: str, description: str) -> tuple[bool, str, str]:
+        """Add a cover letter to user profile."""
+        try:
+            import uuid
+            import os
+            import shutil
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
+            if not user:
+                return False, "", "User not found"
+            
+            # Generate unique ID for cover letter
             cover_letter_id = str(uuid.uuid4())
             
+            # Create user's cover letter directory
+            cover_letter_dir = os.path.join('uploads', 'cover_letters', user_id)
+            os.makedirs(cover_letter_dir, exist_ok=True)
+            
             # Get file extension
-            _, ext = os.path.splitext(file_path)
+            file_ext = os.path.splitext(file_path)[1]
             
-            # Create a secure filename
-            filename = f"{user_id}_{cover_letter_id}{ext}"
+            # Create permanent file path
+            permanent_path = os.path.join(cover_letter_dir, f"{cover_letter_id}{file_ext}")
             
-            # Destination path
-            dest_path = os.path.join(self._upload_folder, 'cover_letters', filename)
+            # Move file to permanent location
+            shutil.move(file_path, permanent_path)
             
-            # Copy file to destination
-            try:
-                with open(file_path, 'rb') as src_file:
-                    with open(dest_path, 'wb') as dest_file:
-                        dest_file.write(src_file.read())
-            except Exception as e:
-                return False, None, f"Error saving cover letter file: {str(e)}"
+            # Get existing personal data
+            personal_data = user.personal_data or {}
+            cover_letters = personal_data.get('cover_letters', [])
             
-            # Create cover letter metadata
+            # Add new cover letter
             cover_letter_data = {
                 'id': cover_letter_id,
                 'name': name,
-                'description': description or '',
-                'filename': filename,
-                'created_at': datetime.datetime.utcnow().isoformat(),
-                'updated_at': datetime.datetime.utcnow().isoformat()
+                'description': description,
+                'file_path': permanent_path,
+                'uploaded_at': datetime.datetime.utcnow().isoformat(),
+                'file_size': os.path.getsize(permanent_path)
             }
             
-            # Add to user's personal data
-            personal_data = user.personal_data
-            if 'cover_letters' not in personal_data:
-                personal_data['cover_letters'] = []
+            cover_letters.append(cover_letter_data)
+            personal_data['cover_letters'] = cover_letters
             
-            personal_data['cover_letters'].append(cover_letter_data)
+            # Save updated data
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, cover_letter_id, "Cover letter added successfully"
             
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding cover letter: {str(e)}")
-            return False, None, f"Error adding cover letter: {str(e)}"
-    
-    def update_cover_letter(self, user_id: str, cover_letter_id: str, name: str = None, description: str = None) -> Tuple[bool, str]:
-        """Update cover letter metadata.
+            return True, cover_letter_id, "Cover letter uploaded successfully"
         
-        Args:
-            user_id: The user ID
-            cover_letter_id: The cover letter ID
-            name: New name (optional)
-            description: New description (optional)
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+        except Exception as e:
+            return False, "", f"Error uploading cover letter: {str(e)}"
+    
+    def get_cover_letter_file_path(self, user_id: str, cover_letter_id: str) -> tuple[bool, str, str]:
+        """Get cover letter file path."""
         try:
-            user = self.get_user_by_id(user_id)
+            import os
+            from models.user import User
+            
+            user = User.query.get(user_id)
+            if not user:
+                return False, "", "User not found"
+            
+            personal_data = user.personal_data or {}
+            cover_letters = personal_data.get('cover_letters', [])
+            
+            # Find cover letter by ID
+            cover_letter = next((cl for cl in cover_letters if cl.get('id') == cover_letter_id), None)
+            
+            if not cover_letter:
+                return False, "", "Cover letter not found"
+            
+            file_path = cover_letter.get('file_path', '')
+            
+            if not file_path or not os.path.exists(file_path):
+                return False, "", "Cover letter file not found"
+            
+            return True, file_path, "Cover letter file found"
+        
+        except Exception as e:
+            return False, "", f"Error retrieving cover letter: {str(e)}"
+    
+    def update_cover_letter(self, user_id: str, cover_letter_id: str, name: str = None, description: str = None) -> tuple[bool, str]:
+        """Update cover letter metadata."""
+        try:
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Get personal data
-            personal_data = user.personal_data
-            
-            # Find the cover letter
+            personal_data = user.personal_data or {}
             cover_letters = personal_data.get('cover_letters', [])
-            cover_letter_index = None
             
-            for i, cover_letter in enumerate(cover_letters):
+            # Find and update cover letter
+            for cover_letter in cover_letters:
                 if cover_letter.get('id') == cover_letter_id:
-                    cover_letter_index = i
+                    if name is not None:
+                        cover_letter['name'] = name
+                    if description is not None:
+                        cover_letter['description'] = description
+                    cover_letter['updated_at'] = datetime.datetime.utcnow().isoformat()
                     break
-            
-            if cover_letter_index is None:
+            else:
                 return False, "Cover letter not found"
             
-            # Update fields
-            if name:
-                cover_letters[cover_letter_index]['name'] = name
-            
-            if description is not None:
-                cover_letters[cover_letter_index]['description'] = description
-            
-            cover_letters[cover_letter_index]['updated_at'] = datetime.datetime.utcnow().isoformat()
-            
-            # Save changes
+            # Save updated data
             personal_data['cover_letters'] = cover_letters
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, "Cover letter updated successfully"
             
+            return True, "Cover letter updated successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating cover letter: {str(e)}")
             return False, f"Error updating cover letter: {str(e)}"
     
-    def delete_cover_letter(self, user_id: str, cover_letter_id: str) -> Tuple[bool, str]:
-        """Delete a cover letter.
-        
-        Args:
-            user_id: The user ID
-            cover_letter_id: The cover letter ID
-            
-        Returns:
-            Tuple[bool, str]: (success, message)
-        """
+    def delete_cover_letter(self, user_id: str, cover_letter_id: str) -> tuple[bool, str]:
+        """Delete a cover letter."""
         try:
-            user = self.get_user_by_id(user_id)
+            import os
+            from models.user import User
+            from models.database import db
+            
+            user = User.query.get(user_id)
             if not user:
                 return False, "User not found"
             
-            # Get personal data
-            personal_data = user.personal_data
-            
-            # Find the cover letter
+            personal_data = user.personal_data or {}
             cover_letters = personal_data.get('cover_letters', [])
-            cover_letter_to_delete = None
             
+            # Find and remove cover letter
+            cover_letter_to_delete = None
             for i, cover_letter in enumerate(cover_letters):
                 if cover_letter.get('id') == cover_letter_id:
-                    cover_letter_to_delete = cover_letter
-                    cover_letters.pop(i)
+                    cover_letter_to_delete = cover_letters.pop(i)
                     break
             
             if not cover_letter_to_delete:
                 return False, "Cover letter not found"
             
-            # Delete the file
-            try:
-                filename = cover_letter_to_delete.get('filename')
-                if filename:
-                    file_path = os.path.join(self._upload_folder, 'cover_letters', filename)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-            except Exception as e:
-                logger.warning(f"Error deleting cover letter file: {str(e)}")
-                # Continue even if file deletion fails
+            # Delete file
+            file_path = cover_letter_to_delete.get('file_path', '')
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass  # Ignore file deletion errors
             
-            # Save changes
+            # Save updated data
             personal_data['cover_letters'] = cover_letters
             user.personal_data = personal_data
-            
+            user.updated_at = datetime.datetime.utcnow()
             db.session.commit()
-            return True, "Cover letter deleted successfully"
             
+            return True, "Cover letter deleted successfully"
+        
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deleting cover letter: {str(e)}")
             return False, f"Error deleting cover letter: {str(e)}"
-    
-    def get_resume_file_path(self, user_id: str, resume_id: str) -> Tuple[bool, Optional[str], str]:
-        """Get the file path for a resume.
-        
-        Args:
-            user_id: The user ID
-            resume_id: The resume ID
-            
-        Returns:
-            Tuple[bool, Optional[str], str]: (success, file_path, message)
-        """
-        try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return False, None, "User not found"
-            
-            # Find the resume
-            resumes = user.personal_data.get('resumes', [])
-            resume = None
-            
-            for r in resumes:
-                if r.get('id') == resume_id:
-                    resume = r
-                    break
-            
-            if not resume:
-                return False, None, "Resume not found"
-            
-            filename = resume.get('filename')
-            if not filename:
-                return False, None, "Resume filename not found"
-            
-            file_path = os.path.join(self._upload_folder, 'resumes', filename)
-            
-            if not os.path.exists(file_path):
-                return False, None, "Resume file not found on disk"
-            
-            return True, file_path, "Resume file found"
-            
-        except Exception as e:
-            logger.error(f"Error getting resume file path: {str(e)}")
-            return False, None, f"Error getting resume file path: {str(e)}"
-    
-    def get_cover_letter_file_path(self, user_id: str, cover_letter_id: str) -> Tuple[bool, Optional[str], str]:
-        """Get the file path for a cover letter.
-        
-        Args:
-            user_id: The user ID
-            cover_letter_id: The cover letter ID
-            
-        Returns:
-            Tuple[bool, Optional[str], str]: (success, file_path, message)
-        """
-        try:
-            user = self.get_user_by_id(user_id)
-            if not user:
-                return False, None, "User not found"
-            
-            # Find the cover letter
-            cover_letters = user.personal_data.get('cover_letters', [])
-            cover_letter = None
-            
-            for cl in cover_letters:
-                if cl.get('id') == cover_letter_id:
-                    cover_letter = cl
-                    break
-            
-            if not cover_letter:
-                return False, None, "Cover letter not found"
-            
-            filename = cover_letter.get('filename')
-            if not filename:
-                return False, None, "Cover letter filename not found"
-            
-            file_path = os.path.join(self._upload_folder, 'cover_letters', filename)
-            
-            if not os.path.exists(file_path):
-                return False, None, "Cover letter file not found on disk"
-            
-            return True, file_path, "Cover letter file found"
-            
-        except Exception as e:
-            logger.error(f"Error getting cover letter file path: {str(e)}")
-            return False, None, f"Error getting cover letter file path: {str(e)}"
-    
-    def _sanitize_personal_info(self, personal_info: Dict) -> Dict:
-        """Sanitize personal information input.
-        
-        Args:
-            personal_info: Raw personal information dictionary
-            
-        Returns:
-            Dict: Sanitized personal information
-        """
-        sanitized = {}
-        
-        # Process only expected fields
-        expected_fields = [
-            'first_name', 'last_name', 'phone', 'address', 'city', 'state',
-            'zip_code', 'country', 'linkedin_url', 'github_url', 'website',
-            'summary', 'skills', 'education', 'experience'
-        ]
-        
-        for field in expected_fields:
-            if field in personal_info:
-                # Basic sanitization - strip whitespace from strings
-                if isinstance(personal_info[field], str):
-                    sanitized[field] = personal_info[field].strip()
-                else:
-                    sanitized[field] = personal_info[field]
-        
-        return sanitized
-    
-    def _sanitize_preferences(self, preferences: Dict) -> Dict:
-        """Sanitize job preferences input.
-        
-        Args:
-            preferences: Raw preferences dictionary
-            
-        Returns:
-            Dict: Sanitized preferences
-        """
-        sanitized = {}
-        
-        # Process expected fields
-        if 'job_titles' in preferences:
-            if isinstance(preferences['job_titles'], list):
-                sanitized['job_titles'] = [title.strip() for title in preferences['job_titles'] if isinstance(title, str)]
-            else:
-                sanitized['job_titles'] = []
-        
-        if 'locations' in preferences:
-            if isinstance(preferences['locations'], list):
-                sanitized['locations'] = [loc.strip() for loc in preferences['locations'] if isinstance(loc, str)]
-            else:
-                sanitized['locations'] = []
-        
-        if 'remote_only' in preferences:
-            sanitized['remote_only'] = bool(preferences['remote_only'])
-        
-        if 'salary_min' in preferences:
-            try:
-                sanitized['salary_min'] = float(preferences['salary_min'])
-            except (ValueError, TypeError):
-                pass
-        
-        if 'salary_max' in preferences:
-            try:
-                sanitized['salary_max'] = float(preferences['salary_max'])
-            except (ValueError, TypeError):
-                pass
-        
-        if 'experience_level' in preferences:
-            sanitized['experience_level'] = preferences['experience_level']
-        
-        if 'job_types' in preferences:
-            if isinstance(preferences['job_types'], list):
-                sanitized['job_types'] = [jt.strip() for jt in preferences['job_types'] if isinstance(jt, str)]
-            else:
-                sanitized['job_types'] = []
-        
-        if 'industries' in preferences:
-            if isinstance(preferences['industries'], list):
-                sanitized['industries'] = [ind.strip() for ind in preferences['industries'] if isinstance(ind, str)]
-            else:
-                sanitized['industries'] = []
-        
-        if 'keywords' in preferences:
-            if isinstance(preferences['keywords'], list):
-                sanitized['keywords'] = [kw.strip() for kw in preferences['keywords'] if isinstance(kw, str)]
-            else:
-                sanitized['keywords'] = []
-        
-        if 'excluded_keywords' in preferences:
-            if isinstance(preferences['excluded_keywords'], list):
-                sanitized['excluded_keywords'] = [kw.strip() for kw in preferences['excluded_keywords'] if isinstance(kw, str)]
-            else:
-                sanitized['excluded_keywords'] = []
-        
-        return sanitized
 
 
-# Create a singleton instance
+# Create service instance
 profile_service = ProfileService()

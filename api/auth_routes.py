@@ -27,10 +27,25 @@ def login():
             flash('Email and password are required', 'error')
             return render_template('login.html')
         
-        # For simplicity, let's allow any email/password combination for now
+        # Authenticate user
+        success, user_data, message = auth_service.authenticate_user(email, password)
+        
+        if not success:
+            flash(message, 'error')
+            return render_template('login.html')
+        
+        # Get user details to determine role
+        from models.user import User
+        user_id = user_data.get('id')
+        user = User.query.get(user_id)
+        
+        if not user:
+            flash('User not found', 'error')
+            return render_template('login.html')
+        
         # Create a session for the user
         session['authenticated'] = True
-        session['user_id'] = 'admin'
+        session['user_id'] = user_id
         session['login_time'] = time.time()
         session['created_at'] = datetime.datetime.utcnow().isoformat()
         session.permanent = True
@@ -39,8 +54,22 @@ def login():
         if 'csrf_token' not in session:
             session['csrf_token'] = secrets.token_hex(16)
         
+        # Get user roles
+        personal_data = user.personal_data or {}
+        roles = personal_data.get('roles', [])
+        
         flash('Login successful', 'success')
-        return redirect(url_for('main.index'))
+        
+        # Redirect based on user role
+        if 'admin' in roles:
+            return redirect(url_for('admin.dashboard'))
+        elif 'hr' in roles:
+            return redirect(url_for('hr.dashboard'))
+        elif 'student' in roles:
+            return redirect(url_for('student.dashboard'))
+        else:
+            # Default redirect for users with no specific role
+            return redirect(url_for('main.index'))
     
     # GET request - show login form
     return render_template('login.html')

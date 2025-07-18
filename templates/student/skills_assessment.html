@@ -1,0 +1,807 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Skills Assessment - Student Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.internships') }}"><i class="fas fa-graduation-cap"></i> Internships</a></li>
+<li><a href="{{ url_for('student.placements') }}"><i class="fas fa-building"></i> Placements</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+<li><a href="{{ url_for('student.skills_assessment') }}" class="active"><i class="fas fa-tasks"></i> Skills Assessment</a></li>
+<li><a href="{{ url_for('student.courses') }}"><i class="fas fa-book"></i> Courses</a></li>
+<li><a href="{{ url_for('student.events') }}"><i class="fas fa-calendar-alt"></i> Events</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Skills Assessment{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" onclick="startNewAssessment()"><i class="fas fa-play"></i> Start New Assessment</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="skills-assessment-container">
+    <div class="assessment-overview">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="overview-card">
+                    <div class="overview-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="overview-content">
+                        <div class="overview-value">{{ stats.total_assessments|default(0) }}</div>
+                        <div class="overview-label">Assessments Taken</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="overview-card">
+                    <div class="overview-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="overview-content">
+                        <div class="overview-value">{{ stats.average_score|default(0) }}%</div>
+                        <div class="overview-label">Average Score</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="overview-card">
+                    <div class="overview-icon">
+                        <i class="fas fa-medal"></i>
+                    </div>
+                    <div class="overview-content">
+                        <div class="overview-value">{{ stats.certifications_earned|default(0) }}</div>
+                        <div class="overview-label">Certifications Earned</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="assessment-categories">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Available Assessments</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="assessment-list">
+                            <div class="assessment-item" data-category="programming">
+                                <div class="assessment-info">
+                                    <div class="assessment-icon">
+                                        <i class="fas fa-code"></i>
+                                    </div>
+                                    <div class="assessment-details">
+                                        <h4>Programming Skills</h4>
+                                        <p>Test your knowledge in various programming languages and concepts</p>
+                                        <div class="assessment-meta">
+                                            <span class="duration"><i class="fas fa-clock"></i> 45 minutes</span>
+                                            <span class="questions"><i class="fas fa-question-circle"></i> 30 questions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="assessment-actions">
+                                    <button class="btn btn-primary" onclick="startAssessment('programming')">
+                                        Start Assessment
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="assessment-item" data-category="web-development">
+                                <div class="assessment-info">
+                                    <div class="assessment-icon">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <div class="assessment-details">
+                                        <h4>Web Development</h4>
+                                        <p>Evaluate your frontend and backend web development skills</p>
+                                        <div class="assessment-meta">
+                                            <span class="duration"><i class="fas fa-clock"></i> 60 minutes</span>
+                                            <span class="questions"><i class="fas fa-question-circle"></i> 40 questions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="assessment-actions">
+                                    <button class="btn btn-primary" onclick="startAssessment('web-development')">
+                                        Start Assessment
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="assessment-item" data-category="data-science">
+                                <div class="assessment-info">
+                                    <div class="assessment-icon">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </div>
+                                    <div class="assessment-details">
+                                        <h4>Data Science & Analytics</h4>
+                                        <p>Test your data analysis, statistics, and machine learning knowledge</p>
+                                        <div class="assessment-meta">
+                                            <span class="duration"><i class="fas fa-clock"></i> 50 minutes</span>
+                                            <span class="questions"><i class="fas fa-question-circle"></i> 35 questions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="assessment-actions">
+                                    <button class="btn btn-primary" onclick="startAssessment('data-science')">
+                                        Start Assessment
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="assessment-item" data-category="soft-skills">
+                                <div class="assessment-info">
+                                    <div class="assessment-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="assessment-details">
+                                        <h4>Soft Skills</h4>
+                                        <p>Assess your communication, leadership, and teamwork abilities</p>
+                                        <div class="assessment-meta">
+                                            <span class="duration"><i class="fas fa-clock"></i> 30 minutes</span>
+                                            <span class="questions"><i class="fas fa-question-circle"></i> 25 questions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="assessment-actions">
+                                    <button class="btn btn-primary" onclick="startAssessment('soft-skills')">
+                                        Start Assessment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Your Assessment History</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if assessment_history %}
+                            <div class="history-list">
+                                {% for assessment in assessment_history %}
+                                <div class="history-item">
+                                    <div class="history-info">
+                                        <h5>{{ assessment.category|title }}</h5>
+                                        <p class="assessment-date">{{ assessment.completed_at|datetime }}</p>
+                                    </div>
+                                    <div class="history-score">
+                                        <div class="score-circle score-{{ assessment.score_class }}">
+                                            {{ assessment.score }}%
+                                        </div>
+                                    </div>
+                                    <div class="history-actions">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewResults({{ assessment.id }})">
+                                            View Results
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="retakeAssessment('{{ assessment.category }}')">
+                                            Retake
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="no-history">
+                                <div class="no-history-icon">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <h4>No Assessments Yet</h4>
+                                <p>Take your first skills assessment to track your progress and identify areas for improvement.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="skills-radar">
+        <div class="card">
+            <div class="card-header">
+                <h3>Skills Radar Chart</h3>
+            </div>
+            <div class="card-body">
+                <div class="radar-container">
+                    <canvas id="skillsRadarChart" width="400" height="400"></canvas>
+                </div>
+                <div class="radar-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #4facfe;"></span>
+                        <span class="legend-label">Current Skills Level</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: #43e97b;"></span>
+                        <span class="legend-label">Industry Average</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="improvement-recommendations">
+        <div class="card">
+            <div class="card-header">
+                <h3>Improvement Recommendations</h3>
+            </div>
+            <div class="card-body">
+                {% if recommendations %}
+                    <div class="recommendations-list">
+                        {% for recommendation in recommendations %}
+                        <div class="recommendation-item">
+                            <div class="recommendation-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div class="recommendation-content">
+                                <h5>{{ recommendation.skill }}</h5>
+                                <p>{{ recommendation.description }}</p>
+                                <div class="recommendation-actions">
+                                    {% for resource in recommendation.resources %}
+                                    <a href="{{ resource.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        {{ resource.title }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-recommendations">
+                        <p>Complete some assessments to get personalized improvement recommendations.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assessment Modal -->
+<div class="modal fade" id="assessmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assessmentTitle">Skills Assessment</h5>
+                <div class="assessment-timer">
+                    <i class="fas fa-clock"></i>
+                    <span id="timeRemaining">45:00</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="assessment-progress">
+                    <div class="progress">
+                        <div class="progress-bar" id="assessmentProgress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="currentQuestion">1</span> of <span id="totalQuestions">30</span> questions
+                    </div>
+                </div>
+                
+                <div class="question-container" id="questionContainer">
+                    <!-- Questions will be loaded dynamically -->
+                </div>
+                
+                <div class="assessment-navigation">
+                    <button class="btn btn-secondary" id="prevButton" onclick="previousQuestion()" disabled>
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" id="nextButton" onclick="nextQuestion()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="btn btn-success" id="submitButton" onclick="submitAssessment()" style="display: none;">
+                        Submit Assessment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .skills-assessment-container {
+        max-width: 1200px;
+    }
+    
+    .assessment-overview {
+        margin-bottom: 2rem;
+    }
+    
+    .overview-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .overview-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .overview-content {
+        flex: 1;
+    }
+    
+    .overview-value {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .overview-label {
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .assessment-categories {
+        margin-bottom: 2rem;
+    }
+    
+    .assessment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .assessment-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .assessment-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .assessment-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+    }
+    
+    .assessment-details h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--dark-color);
+    }
+    
+    .assessment-details p {
+        margin: 0 0 0.75rem 0;
+        color: var(--gray-color);
+        font-size: 0.9rem;
+    }
+    
+    .assessment-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--gray-color);
+    }
+    
+    .assessment-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .history-info h5 {
+        margin: 0 0 0.25rem 0;
+        color: var(--dark-color);
+    }
+    
+    .assessment-date {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--gray-color);
+    }
+    
+    .score-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: white;
+    }
+    
+    .score-excellent { background-color: #28a745; }
+    .score-good { background-color: #17a2b8; }
+    .score-average { background-color: #ffc107; color: #333; }
+    .score-poor { background-color: #dc3545; }
+    
+    .history-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .no-history {
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .no-history-icon {
+        font-size: 3rem;
+        color: var(--gray-color);
+        margin-bottom: 1rem;
+    }
+    
+    .skills-radar {
+        margin-bottom: 2rem;
+    }
+    
+    .radar-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    
+    .radar-legend {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+    }
+    
+    .improvement-recommendations {
+        margin-bottom: 2rem;
+    }
+    
+    .recommendation-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .recommendation-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #fff3cd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #856404;
+        flex-shrink: 0;
+    }
+    
+    .recommendation-content {
+        flex: 1;
+    }
+    
+    .recommendation-content h5 {
+        margin: 0 0 0.5rem 0;
+        color: var(--dark-color);
+    }
+    
+    .recommendation-content p {
+        margin: 0 0 1rem 0;
+        color: var(--gray-color);
+    }
+    
+    .recommendation-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .assessment-timer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .assessment-progress {
+        margin-bottom: 2rem;
+    }
+    
+    .progress-text {
+        text-align: center;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--gray-color);
+    }
+    
+    .question-container {
+        min-height: 300px;
+        margin-bottom: 2rem;
+    }
+    
+    .assessment-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    @media (max-width: 768px) {
+        .assessment-item {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .history-item {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .recommendation-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .radar-legend {
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let currentAssessment = null;
+    let currentQuestionIndex = 0;
+    let assessmentTimer = null;
+    let timeRemaining = 0;
+    
+    // Skills Radar Chart
+    const radarCtx = document.getElementById('skillsRadarChart').getContext('2d');
+    const skillsRadarChart = new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Programming', 'Web Development', 'Data Science', 'Soft Skills', 'Problem Solving', 'Communication'],
+            datasets: [{
+                label: 'Your Skills',
+                data: [{{ skills_data.programming|default(0) }}, {{ skills_data.web_development|default(0) }}, {{ skills_data.data_science|default(0) }}, {{ skills_data.soft_skills|default(0) }}, {{ skills_data.problem_solving|default(0) }}, {{ skills_data.communication|default(0) }}],
+                backgroundColor: 'rgba(79, 172, 254, 0.2)',
+                borderColor: 'rgba(79, 172, 254, 1)',
+                pointBackgroundColor: 'rgba(79, 172, 254, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(79, 172, 254, 1)'
+            }, {
+                label: 'Industry Average',
+                data: [75, 70, 65, 80, 75, 85],
+                backgroundColor: 'rgba(67, 233, 123, 0.2)',
+                borderColor: 'rgba(67, 233, 123, 1)',
+                pointBackgroundColor: 'rgba(67, 233, 123, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(67, 233, 123, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    function startNewAssessment() {
+        // Show available assessments or redirect to assessment selection
+        alert('Select an assessment category to begin');
+    }
+    
+    function startAssessment(category) {
+        fetch(`/student/skills-assessment/start/${category}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentAssessment = data.assessment;
+                currentQuestionIndex = 0;
+                timeRemaining = data.duration * 60; // Convert to seconds
+                
+                document.getElementById('assessmentTitle').textContent = `${category.replace('-', ' ').toUpperCase()} Assessment`;
+                document.getElementById('totalQuestions').textContent = data.questions.length;
+                
+                loadQuestion(0);
+                startTimer();
+                $('#assessmentModal').modal('show');
+            } else {
+                alert('Error starting assessment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error starting assessment');
+        });
+    }
+    
+    function loadQuestion(index) {
+        if (!currentAssessment || !currentAssessment.questions) return;
+        
+        const question = currentAssessment.questions[index];
+        const container = document.getElementById('questionContainer');
+        
+        let questionHTML = `
+            <div class="question">
+                <h4>Question ${index + 1}</h4>
+                <p>${question.text}</p>
+                <div class="question-options">
+        `;
+        
+        question.options.forEach((option, optionIndex) => {
+            questionHTML += `
+                <div class="form-check">
+                    <input type="radio" name="question_${index}" value="${optionIndex}" class="form-check-input" id="option_${index}_${optionIndex}">
+                    <label for="option_${index}_${optionIndex}" class="form-check-label">${option}</label>
+                </div>
+            `;
+        });
+        
+        questionHTML += `
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = questionHTML;
+        
+        // Update progress
+        const progress = ((index + 1) / currentAssessment.questions.length) * 100;
+        document.getElementById('assessmentProgress').style.width = progress + '%';
+        document.getElementById('currentQuestion').textContent = index + 1;
+        
+        // Update navigation buttons
+        document.getElementById('prevButton').disabled = index === 0;
+        
+        if (index === currentAssessment.questions.length - 1) {
+            document.getElementById('nextButton').style.display = 'none';
+            document.getElementById('submitButton').style.display = 'inline-block';
+        } else {
+            document.getElementById('nextButton').style.display = 'inline-block';
+            document.getElementById('submitButton').style.display = 'none';
+        }
+    }
+    
+    function previousQuestion() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            loadQuestion(currentQuestionIndex);
+        }
+    }
+    
+    function nextQuestion() {
+        if (currentQuestionIndex < currentAssessment.questions.length - 1) {
+            currentQuestionIndex++;
+            loadQuestion(currentQuestionIndex);
+        }
+    }
+    
+    function startTimer() {
+        assessmentTimer = setInterval(() => {
+            timeRemaining--;
+            
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            
+            document.getElementById('timeRemaining').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeRemaining <= 0) {
+                clearInterval(assessmentTimer);
+                submitAssessment();
+            }
+        }, 1000);
+    }
+    
+    function submitAssessment() {
+        if (assessmentTimer) {
+            clearInterval(assessmentTimer);
+        }
+        
+        // Collect answers
+        const answers = [];
+        for (let i = 0; i < currentAssessment.questions.length; i++) {
+            const selectedOption = document.querySelector(`input[name="question_${i}"]:checked`);
+            answers.push(selectedOption ? parseInt(selectedOption.value) : null);
+        }
+        
+        fetch('/student/skills-assessment/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify({
+                assessment_id: currentAssessment.id,
+                answers: answers
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#assessmentModal').modal('hide');
+                alert(`Assessment completed! Your score: ${data.score}%`);
+                location.reload();
+            } else {
+                alert('Error submitting assessment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error submitting assessment');
+        });
+    }
+    
+    function viewResults(assessmentId) {
+        window.open(`/student/skills-assessment/results/${assessmentId}`, '_blank');
+    }
+    
+    function retakeAssessment(category) {
+        if (confirm('Are you sure you want to retake this assessment? Your previous score will be replaced.')) {
+            startAssessment(category);
+        }
+    }
+</script>
+{% endblock %}

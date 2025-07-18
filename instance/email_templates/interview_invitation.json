@@ -1,0 +1,4 @@
+{
+  "subject": "Interview Invitation: {{job_title}}",
+  "body": "\n                <h2>Interview Invitation</h2>\n                <p>Dear {{user_name}},</p>\n                <p>We are pleased to invite you for an interview for the <strong>{{job_title}}</strong> position at <strong>{{company}}</strong>.</p>\n                <p><strong>Interview Details:</strong></p>\n                <ul>\n                    <li><strong>Date:</strong> {{interview_date}}</li>\n                    <li><strong>Time:</strong> {{interview_time}}</li>\n                    <li><strong>Type:</strong> {{interview_type}}</li>\n                    <li><strong>Location/Link:</strong> {{interview_location}}</li>\n                </ul>\n                <p>Please confirm your attendance by replying to this email or through your dashboard.</p>\n                <p>Best regards,<br>The Recruitment Team</p>\n                "
+}

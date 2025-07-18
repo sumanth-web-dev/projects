@@ -11,14 +11,37 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 def index():
     """Render the home page."""
+    # Always show the index.html page when accessing the root URL
+    return render_template('index.html')
+    
+@main_bp.route('/dashboard')
+def dashboard():
+    """Render the dashboard based on user role."""
     # Check if user is logged in
     user_id = auth_service.get_current_user_id()
     if user_id:
-        # User is logged in, show dashboard
+        # User is logged in, check their role and redirect accordingly
+        from models.user import User
+        user = User.query.get(user_id)
+        
+        if user:
+            personal_data = user.personal_data or {}
+            roles = personal_data.get('roles', [])
+            
+            # Redirect based on user role
+            if 'admin' in roles:
+                return redirect(url_for('admin.dashboard'))
+            elif 'hr' in roles:
+                return redirect(url_for('hr.dashboard'))
+            elif 'student' in roles:
+                return redirect(url_for('student.dashboard'))
+            
+        # If no specific role or user not found, show general dashboard
         return render_template('dashboard.html', user_id=user_id)
     else:
-        # User is not logged in, show welcome page
-        return render_template('welcome.html')
+        # User is not logged in, redirect to login page
+        flash('Please log in to access your dashboard.', 'error')
+        return redirect(url_for('auth.login'))
 
 @main_bp.route('/profile')
 def profile():

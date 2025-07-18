@@ -1,0 +1,1243 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Student Dashboard - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.internships') }}"><i class="fas fa-graduation-cap"></i> Internships</a></li>
+<li><a href="{{ url_for('student.placements') }}"><i class="fas fa-building"></i> Placements</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+<li><a href="{{ url_for('student.skills_assessment') }}"><i class="fas fa-tasks"></i> Skills Assessment</a></li>
+<li><a href="{{ url_for('student.courses') }}"><i class="fas fa-book"></i> Courses</a></li>
+<li><a href="{{ url_for('student.events') }}"><i class="fas fa-calendar-alt"></i> Events</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Welcome back, {{ user.personal_data.first_name|default('Student') }}!{% endblock %}
+
+{% block page_actions %}
+<div class="quick-actions">
+    <a href="{{ url_for('job.list_jobs') }}" class="btn btn-primary"><i class="fas fa-search"></i> Find Jobs</a>
+    <a href="{{ url_for('student.profile') }}" class="btn btn-outline-primary"><i class="fas fa-user-edit"></i> Update Profile</a>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Key Metrics Dashboard -->
+<div class="dashboard-metrics">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="metric-card applications">
+                <div class="metric-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ stats.applications_count|default(0) }}</div>
+                    <div class="metric-label">Applications</div>
+                    <div class="metric-change">+{{ stats.applications_this_week|default(0) }} this week</div>
+                </div>
+                <a href="{{ url_for('student.applications') }}" class="metric-link">View All</a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card interviews">
+                <div class="metric-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ stats.interviews_count|default(0) }}</div>
+                    <div class="metric-label">Interviews</div>
+                    <div class="metric-change">{{ stats.upcoming_interviews|default(0) }} upcoming</div>
+                </div>
+                <a href="{{ url_for('student.interviews') }}" class="metric-link">Schedule</a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card offers">
+                <div class="metric-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ stats.offers_count|default(0) }}</div>
+                    <div class="metric-label">Job Offers</div>
+                    <div class="metric-change">{{ stats.pending_offers|default(0) }} pending</div>
+                </div>
+                <a href="{{ url_for('student.offers') }}" class="metric-link">Manage</a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card profile">
+                <div class="metric-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value">{{ stats.profile_completion|default(0) }}%</div>
+                    <div class="metric-label">Profile Complete</div>
+                    <div class="metric-change">{{ 100 - stats.profile_completion|default(0) }}% remaining</div>
+                </div>
+                <a href="{{ url_for('student.profile') }}" class="metric-link">Update</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Grid -->
+<div class="quick-actions-grid">
+    <div class="row">
+        <div class="col-md-3">
+            <a href="{{ url_for('job.list_jobs') }}" class="action-card browse-jobs">
+                <div class="action-icon">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Browse Jobs</h4>
+                    <p>{{ stats.new_jobs_today|default(0) }} new jobs today</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('student.resume') }}" class="action-card build-resume">
+                <div class="action-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Build Resume</h4>
+                    <p>Create professional resume</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('student.skills_assessment') }}" class="action-card skills-test">
+                <div class="action-icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Skills Assessment</h4>
+                    <p>Test your abilities</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('campus_drive.list_drives') }}" class="action-card campus-drives">
+                <div class="action-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Campus Drives</h4>
+                    <p>{{ stats.upcoming_drives|default(0) }} upcoming</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Sections -->
+<div class="dashboard-sections">
+    <div class="row">
+        <!-- Recommended Jobs Section -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-star text-warning"></i> Recommended Jobs</h3>
+                    <a href="{{ url_for('job.recommended_jobs') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recommended_jobs %}
+                        <div class="jobs-list">
+                            {% for job in recommended_jobs[:3] %}
+                            <div class="job-item">
+                                <div class="job-info">
+                                    <h4>{{ job.job.title }}</h4>
+                                    <p class="company">{{ job.job.company }}</p>
+                                    <div class="job-meta">
+                                        <span><i class="fas fa-map-marker-alt"></i> {{ job.job.location }}</span>
+                                        <span><i class="fas fa-dollar-sign"></i> {{ job.job.salary_range|default('Competitive') }}</span>
+                                    </div>
+                                    <div class="job-skills">
+                                        {% for skill in job.matching_skills[:3] %}
+                                        <span class="skill-tag">{{ skill }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="job-actions">
+                                    <span class="match-score">{{ (job.match_score * 100)|round }}% Match</span>
+                                    <a href="{{ url_for('job.view_job', job_id=job.job.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    <button class="btn btn-sm btn-outline-success" onclick="quickApply({{ job.job.id }})">Apply</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-search fa-3x"></i>
+                            <h4>No Recommendations Yet</h4>
+                            <p>Complete your profile to get personalized job recommendations.</p>
+                            <a href="{{ url_for('student.profile') }}" class="btn btn-primary">Complete Profile</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Completion & Quick Stats -->
+        <div class="col-lg-4">
+            <div class="card profile-completion">
+                <div class="card-header">
+                    <h3><i class="fas fa-user-check"></i> Profile Status</h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress-circle">
+                        <div class="progress-value">{{ stats.profile_completion|default(0) }}%</div>
+                    </div>
+                    <div class="completion-checklist">
+                        <div class="check-item {{ 'completed' if profile_checks.basic_info else '' }}">
+                            <i class="fas {{ 'fa-check-circle' if profile_checks.basic_info else 'fa-circle' }}"></i>
+                            <span>Basic Information</span>
+                        </div>
+                        <div class="check-item {{ 'completed' if profile_checks.education else '' }}">
+                            <i class="fas {{ 'fa-check-circle' if profile_checks.education else 'fa-circle' }}"></i>
+                            <span>Education</span>
+                        </div>
+                        <div class="check-item {{ 'completed' if profile_checks.skills else '' }}">
+                            <i class="fas {{ 'fa-check-circle' if profile_checks.skills else 'fa-circle' }}"></i>
+                            <span>Skills</span>
+                        </div>
+                        <div class="check-item {{ 'completed' if profile_checks.resume else '' }}">
+                            <i class="fas {{ 'fa-check-circle' if profile_checks.resume else 'fa-circle' }}"></i>
+                            <span>Resume</span>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('student.profile') }}" class="btn btn-primary btn-block">Update Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applications & Campus Drives Row -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clipboard-list"></i> Recent Applications</h3>
+                    <a href="{{ url_for('student.applications') }}" class="btn btn-sm btn-outline-info">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_applications %}
+                        <div class="applications-timeline">
+                            {% for application in recent_applications[:4] %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker status-{{ application.status }}">
+                                    <i class="fas fa-circle"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h5>{{ application.job.title }}</h5>
+                                    <p>{{ application.job.company }}</p>
+                                    <div class="timeline-meta">
+                                        <span class="status-badge status-{{ application.status }}">
+                                            {{ application.status|title|replace('_', ' ') }}
+                                        </span>
+                                        <span class="date">{{ application.submitted_at|date }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-clipboard-list fa-2x"></i>
+                            <p>No applications yet</p>
+                            <a href="{{ url_for('job.list_jobs') }}" class="btn btn-sm btn-primary">Start Applying</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-university"></i> Campus Drives</h3>
+                    <a href="{{ url_for('campus_drive.list_drives') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_drives %}
+                        <div class="drives-list">
+                            {% for drive in upcoming_drives[:3] %}
+                            <div class="drive-item">
+                                <div class="drive-date">
+                                    <div class="date-day">{{ drive.start_date.strftime('%d') }}</div>
+                                    <div class="date-month">{{ drive.start_date.strftime('%b') }}</div>
+                                </div>
+                                <div class="drive-info">
+                                    <h5>{{ drive.title }}</h5>
+                                    <p>{{ drive.institution.name }}</p>
+                                    <div class="drive-meta">
+                                        <span><i class="fas fa-building"></i> {{ drive.companies_count }} companies</span>
+                                        {% if drive.is_virtual %}
+                                        <span class="virtual-badge">Virtual</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="drive-actions">
+                                    {% if drive.is_registered %}
+                                    <span class="badge badge-success">Registered</span>
+                                    {% else %}
+                                    <a href="{{ url_for('campus_drive.register', drive_id=drive.id) }}" class="btn btn-sm btn-primary">Register</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-university fa-2x"></i>
+                            <p>No upcoming drives</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Internships & Courses Row -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-graduation-cap"></i> Internships</h3>
+                    <a href="{{ url_for('student.internships') }}" class="btn btn-sm btn-outline-info">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if internships %}
+                        <div class="internships-list">
+                            {% for internship in internships[:3] %}
+                            <div class="internship-item">
+                                <h5>{{ internship.title }}</h5>
+                                <p class="company">{{ internship.company }}</p>
+                                <div class="internship-meta">
+                                    <span><i class="fas fa-clock"></i> {{ internship.duration }}</span>
+                                    <span><i class="fas fa-money-bill"></i> {{ internship.stipend|default('Unpaid') }}</span>
+                                </div>
+                                <a href="{{ url_for('student.view_internship', internship_id=internship.id) }}" class="btn btn-sm btn-outline-primary">Apply</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-graduation-cap fa-2x"></i>
+                            <p>No internships available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-book"></i> Recommended Courses</h3>
+                    <a href="{{ url_for('student.courses') }}" class="btn btn-sm btn-outline-primary">Browse All</a>
+                </div>
+                <div class="card-body">
+                    {% if recommended_courses %}
+                        <div class="courses-list">
+                            {% for course in recommended_courses[:3] %}
+                            <div class="course-item">
+                                <div class="course-info">
+                                    <h5>{{ course.title }}</h5>
+                                    <p class="provider">{{ course.provider }}</p>
+                                    <div class="course-meta">
+                                        <span class="duration">{{ course.duration }}</span>
+                                        <span class="rating">
+                                            {% for i in range(course.rating) %}
+                                            <i class="fas fa-star text-warning"></i>
+                                            {% endfor %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="course-price">
+                                    {% if course.is_free %}
+                                    <span class="badge badge-success">Free</span>
+                                    {% else %}
+                                    <span class="price">${{ course.price }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-book fa-2x"></i>
+                            <p>No course recommendations</p>
+                            <a href="{{ url_for('student.skills_assessment') }}" class="btn btn-sm btn-primary">Take Assessment</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events & My Registrations Row -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
+                    <a href="{{ url_for('student.events') }}" class="btn btn-sm btn-outline-success">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_events %}
+                        <div class="events-list">
+                            {% for event in upcoming_events[:3] %}
+                            <div class="event-item">
+                                <div class="event-date">
+                                    <div class="date-day">{{ event.date.strftime('%d') }}</div>
+                                    <div class="date-month">{{ event.date.strftime('%b') }}</div>
+                                </div>
+                                <div class="event-info">
+                                    <h5>{{ event.title }}</h5>
+                                    <p class="event-type">{{ event.type|title }}</p>
+                                    <div class="event-meta">
+                                        <span><i class="fas fa-clock"></i> {{ event.time }}</span>
+                                        <span><i class="fas fa-map-marker-alt"></i> {{ event.location }}</span>
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('student.register_event', event_id=event.id) }}" class="btn btn-sm btn-outline-success">Register</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-calendar-alt fa-2x"></i>
+                            <p>No upcoming events</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clipboard-check"></i> My Registrations</h3>
+                    <a href="{{ url_for('campus_drive.my_registrations') }}" class="btn btn-sm btn-outline-success">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if my_registrations %}
+                        <div class="registrations-list">
+                            {% for registration in my_registrations[:4] %}
+                            <div class="registration-item">
+                                <div class="registration-info">
+                                    <h6>{{ registration.event_title }}</h6>
+                                    <p class="registration-type">{{ registration.type|title }}</p>
+                                    <span class="registration-date">{{ registration.event_date|date }}</span>
+                                </div>
+                                <span class="badge badge-{{ 'success' if registration.status == 'confirmed' else 'warning' }}">
+                                    {{ registration.status|title }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-clipboard-check fa-2x"></i>
+                            <p>No registrations yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Placements Statistics -->
+    <div class="row mt-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-building"></i> Placement Statistics</h3>
+                    <a href="{{ url_for('student.placements') }}" class="btn btn-sm btn-outline-warning">View Details</a>
+                </div>
+                <div class="card-body">
+                    {% if placement_stats %}
+                        <div class="placement-overview">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="placement-stat">
+                                        <div class="stat-value">{{ placement_stats.total_placements }}</div>
+                                        <div class="stat-label">Total Placements</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="placement-stat">
+                                        <div class="stat-value">{{ placement_stats.average_package }}</div>
+                                        <div class="stat-label">Average Package</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="placement-stat">
+                                        <div class="stat-value">{{ placement_stats.highest_package }}</div>
+                                        <div class="stat-label">Highest Package</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="placement-stat">
+                                        <div class="stat-value">{{ placement_stats.placement_rate }}%</div>
+                                        <div class="stat-label">Placement Rate</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state-small">
+                            <i class="fas fa-building fa-2x"></i>
+                            <p>No placement data available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div><style>
+
+    /* Dashboard Metrics */
+    .dashboard-metrics {
+        margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        border: 1px solid #e3e6f0;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    }
+    
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .applications .metric-icon { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .interviews .metric-icon { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .offers .metric-icon { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .profile .metric-icon { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--gray-color);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-change {
+        font-size: 0.75rem;
+        color: var(--success-color);
+        font-weight: 500;
+    }
+    
+    .metric-link {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 0.75rem;
+        text-decoration: none;
+        color: var(--primary-color);
+        font-weight: 500;
+    }
+    
+    /* Quick Actions Grid */
+    .quick-actions-grid {
+        margin-bottom: 2rem;
+    }
+    
+    .action-card {
+        display: block;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        border: 1px solid #e3e6f0;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-card:hover {
+        text-decoration: none;
+        color: inherit;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+    }
+    
+    .browse-jobs::before { background: linear-gradient(90deg, #667eea, #764ba2); }
+    .build-resume::before { background: linear-gradient(90deg, #f093fb, #f5576c); }
+    .skills-test::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+    .campus-drives::before { background: linear-gradient(90deg, #43e97b, #38f9d7); }
+    
+    .action-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .browse-jobs .action-icon { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .build-resume .action-icon { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .skills-test .action-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .campus-drives .action-icon { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+    
+    .action-content h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: var(--dark-color);
+    }
+    
+    .action-content p {
+        font-size: 0.875rem;
+        color: var(--gray-color);
+        margin: 0;
+    }
+    
+    /* Dashboard Sections */
+    .dashboard-sections .card {
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        border: 1px solid #e3e6f0;
+        margin-bottom: 2rem;
+    }
+    
+    .card-header {
+        background: white;
+        border-bottom: 1px solid #e3e6f0;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-color);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Job Items */
+    .job-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .job-item:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+    
+    .job-info h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+    
+    .job-info .company {
+        margin: 0 0 0.75rem 0;
+        font-weight: 500;
+        color: var(--dark-color);
+    }
+    
+    .job-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--gray-color);
+    }
+    
+    .job-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .job-skills {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .skill-tag {
+        background: var(--primary-light);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .job-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+    
+    .match-score {
+        background: var(--success-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    /* Profile Completion */
+    .profile-completion .card-body {
+        text-align: center;
+    }
+    
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary-color) {{ stats.profile_completion|default(0) * 3.6 }}deg, #e3e6f0 0deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        position: relative;
+    }
+    
+    .progress-circle::before {
+        content: '';
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: white;
+        position: absolute;
+    }
+    
+    .progress-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .completion-checklist {
+        text-align: left;
+        margin-bottom: 1.5rem;
+    }
+    
+    .check-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        font-size: 0.875rem;
+    }
+    
+    .check-item.completed {
+        color: var(--success-color);
+    }
+    
+    .check-item i {
+        width: 16px;
+    }
+    
+    /* Timeline */
+    .applications-timeline {
+        position: relative;
+    }
+    
+    .applications-timeline::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e3e6f0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.5rem;
+    }
+    
+    .timeline-marker.status-submitted { background: #17a2b8; }
+    .timeline-marker.status-under_review { background: #ffc107; }
+    .timeline-marker.status-shortlisted { background: #28a745; }
+    .timeline-marker.status-interview_scheduled { background: #6f42c1; }
+    .timeline-marker.status-offer_received { background: #28a745; }
+    .timeline-marker.status-rejected { background: #dc3545; }
+    
+    .timeline-content h5 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .timeline-content p {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .timeline-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-submitted { background: #d1ecf1; color: #0c5460; }
+    .status-under_review { background: #fff3cd; color: #856404; }
+    .status-shortlisted { background: #d4edda; color: #155724; }
+    .status-interview_scheduled { background: #e2e3f0; color: #383d41; }
+    .status-offer_received { background: #d4edda; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    
+    .date {
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    /* Drive Items */
+    .drive-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .drive-date {
+        text-align: center;
+        min-width: 50px;
+    }
+    
+    .date-day {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        line-height: 1;
+    }
+    
+    .date-month {
+        font-size: 0.75rem;
+        color: var(--gray-color);
+        text-transform: uppercase;
+    }
+    
+    .drive-info {
+        flex: 1;
+    }
+    
+    .drive-info h5 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .drive-info p {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .drive-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    .virtual-badge {
+        background: var(--info-color);
+        color: white;
+        padding: 0.125rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.625rem;
+    }
+    
+    /* Event Items */
+    .event-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .event-date {
+        text-align: center;
+        min-width: 50px;
+    }
+    
+    .event-info {
+        flex: 1;
+    }
+    
+    .event-info h5 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .event-type {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .event-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    /* Internship Items */
+    .internship-item {
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .internship-item h5 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .internship-item .company {
+        margin: 0 0 0.75rem 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .internship-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    /* Course Items */
+    .course-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .course-info {
+        flex: 1;
+    }
+    
+    .course-info h5 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .provider {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-color);
+        font-size: 0.875rem;
+    }
+    
+    .course-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    .rating i {
+        font-size: 0.75rem;
+    }
+    
+    .course-price .price {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    /* Registration Items */
+    .registration-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .registration-info h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.9rem;
+        color: var(--dark-color);
+    }
+    
+    .registration-type {
+        margin: 0 0 0.25rem 0;
+        color: var(--gray-color);
+        font-size: 0.75rem;
+    }
+    
+    .registration-date {
+        font-size: 0.75rem;
+        color: var(--gray-color);
+    }
+    
+    /* Placement Statistics */
+    .placement-overview {
+        padding: 1rem 0;
+    }
+    
+    .placement-stat {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .placement-stat .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .placement-stat .stat-label {
+        font-size: 0.875rem;
+        color: var(--gray-color);
+    }
+    
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--gray-color);
+    }
+    
+    .empty-state i {
+        margin-bottom: 1rem;
+        color: var(--gray-light);
+    }
+    
+    .empty-state h4 {
+        margin-bottom: 1rem;
+        color: var(--dark-color);
+    }
+    
+    .empty-state-small {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--gray-color);
+    }
+    
+    .empty-state-small i {
+        margin-bottom: 1rem;
+        color: var(--gray-light);
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .metric-card, .action-card {
+            margin-bottom: 1rem;
+        }
+        
+        .job-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .job-actions {
+            flex-direction: row;
+            align-items: center;
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .drive-item, .event-item, .course-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .timeline-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .job-meta, .drive-meta, .event-meta, .course-meta {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+</style>
+
+<script>
+    function quickApply(jobId) {
+        if (confirm('Are you sure you want to apply to this job?')) {
+            fetch(`/job/${jobId}/quick-apply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ session.csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Application submitted successfully!');
+                    location.reload();
+                } else {
+                    alert('Error submitting application: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error submitting application');
+            });
+        }
+    }
+    
+    // Auto-refresh dashboard data every 5 minutes
+    setInterval(() => {
+        fetch('/student/dashboard/refresh')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update metrics without full page reload
+                    updateDashboardMetrics(data.stats);
+                }
+            })
+            .catch(error => {
+                console.log('Dashboard refresh failed');
+            });
+    }, 300000); // 5 minutes
+    
+    function updateDashboardMetrics(stats) {
+        // Update metric values
+        document.querySelectorAll('.metric-value').forEach((element, index) => {
+            const values = [
+                stats.applications_count,
+                stats.interviews_count,
+                stats.offers_count,
+                stats.profile_completion
+            ];
+            if (values[index] !== undefined) {
+                element.textContent = values[index] + (index === 3 ? '%' : '');
+            }
+        });
+    }
+</script>
+{% endblock %}

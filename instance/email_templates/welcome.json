@@ -1,0 +1,4 @@
+{
+  "subject": "Welcome to Job Application Agent",
+  "body": "\n                <h2>Welcome to Job Application Agent!</h2>\n                <p>Dear {{user_name}},</p>\n                <p>Thank you for joining Job Application Agent. We're excited to help you in your career journey.</p>\n                <p>With your new account, you can:</p>\n                <ul>\n                    <li>Search and apply for jobs</li>\n                    <li>Create and manage your professional profile</li>\n                    <li>Track your job applications</li>\n                    <li>Receive personalized job recommendations</li>\n                </ul>\n                <p>If you have any questions, please don't hesitate to contact us.</p>\n                <p>Best regards,<br>The Job Application Agent Team</p>\n                "
+}

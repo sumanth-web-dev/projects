@@ -150,9 +150,15 @@ def create_app(config_name='Config'):
     
     # Import role-based blueprints
     from api.user_routes import user_bp
-    from api.hr_routes import hr_bp
+    try:
+        from api.hr_routes_enhanced import hr_bp
+    except ImportError:
+        from api.hr_routes import hr_bp
     from api.admin_routes import admin_bp
-    from api.student_routes import student_bp
+    try:
+        from api.student_routes_enhanced import student_bp
+    except ImportError:
+        from api.student_routes import student_bp
     from api.job_routes import job_bp
     from api.campus_drive_routes import campus_drive_bp
     

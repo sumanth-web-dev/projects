@@ -1,0 +1,4 @@
+{
+  "subject": "Job Recommendations Based on Your Profile",
+  "body": "\n                <h2>Job Recommendations</h2>\n                <p>Dear {{user_name}},</p>\n                <p>Based on your profile and preferences, we've found some job opportunities that might interest you:</p>\n                <ul>\n                    {{#each jobs}}\n                    <li>\n                        <strong>{{this.title}}</strong> at {{this.company}}<br>\n                        Location: {{this.location}}<br>\n                        <a href=\"{{this.url}}\">View Job</a>\n                    </li>\n                    {{/each}}\n                </ul>\n                <p>Log in to your dashboard to see more recommendations and apply for these positions.</p>\n                <p>Best regards,<br>The Job Application Agent Team</p>\n                "
+}

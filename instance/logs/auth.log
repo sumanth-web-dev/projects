@@ -18,3 +18,19 @@
 {"timestamp": "2025-07-17T21:05:32.142285", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
 {"timestamp": "2025-07-17T21:08:17.790955", "success": false, "auth_type": "login", "identifier": "admin@example.com", "details": {"reason": "password_not_set", "user_id": "f83f69c8-5c26-4b77-8454-5f4e0bac384d"}}
 {"timestamp": "2025-07-17T21:08:21.554994", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:22:37.176204", "success": false, "auth_type": "login", "identifier": "bommu7997@gmail.com", "details": {"reason": "user_not_found"}}
+{"timestamp": "2025-07-18T07:22:47.330798", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:22:50.124629", "success": false, "auth_type": "login", "identifier": "bommu7997@gmail.com", "details": {"reason": "user_not_found"}}
+{"timestamp": "2025-07-18T07:22:50.925167", "success": false, "auth_type": "login", "identifier": "bommu7997@gmail.com", "details": {"reason": "user_not_found"}}
+{"timestamp": "2025-07-18T07:22:51.862822", "success": false, "auth_type": "login", "identifier": "bommu7997@gmail.com", "details": {"reason": "user_not_found"}}
+{"timestamp": "2025-07-18T07:22:53.706904", "success": false, "auth_type": "login", "identifier": "bommu7997@gmail.com", "details": {"reason": "user_not_found"}}
+{"timestamp": "2025-07-18T07:23:33.253603", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:23:37.149884", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:23:37.936711", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:23:38.199612", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:23:38.874837", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:23:39.125119", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:26:27.360250", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "password_not_set", "user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02"}}
+{"timestamp": "2025-07-18T07:27:59.948272", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "error", "error": "'AuthService' object has no attribute 'set_password'"}}
+{"timestamp": "2025-07-18T07:28:05.486711", "success": false, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"reason": "error", "error": "'AuthService' object has no attribute 'set_password'"}}
+{"timestamp": "2025-07-18T07:28:35.797141", "success": true, "auth_type": "login", "identifier": "sumanth3633@gmail.com", "details": {"user_id": "e171c1d9-c2c0-44dc-bc65-372ad9ae5e02", "note": "password_set_on_first_login"}}

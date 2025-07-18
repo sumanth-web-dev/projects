@@ -1,0 +1,497 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}HR Reports & Analytics - HR Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+<li><a href="{{ url_for('hr.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('hr.candidates') }}"><i class="fas fa-users"></i> Candidates</a></li>
+<li><a href="{{ url_for('hr.interviews') }}"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('hr.campus_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('hr.reports') }}" class="active"><i class="fas fa-chart-bar"></i> Reports</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}HR Reports & Analytics{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" onclick="exportReport()"><i class="fas fa-download"></i> Export Report</button>
+<button class="btn btn-secondary" onclick="scheduleReport()"><i class="fas fa-clock"></i> Schedule Report</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="reports-container">
+    <div class="reports-filters">
+        <div class="card">
+            <div class="card-header">
+                <h3>Report Filters</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="date_range">Date Range</label>
+                    <select id="date_range" class="form-control" onchange="updateDateRange()">
+                        <option value="last_7_days">Last 7 Days</option>
+                        <option value="last_30_days" selected>Last 30 Days</option>
+                        <option value="last_90_days">Last 90 Days</option>
+                        <option value="last_year">Last Year</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <div id="custom_date_range" class="form-group" style="display: none;">
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" class="form-control">
+                    <label for="end_date" class="mt-2">End Date</label>
+                    <input type="date" id="end_date" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="department_filter">Department</label>
+                    <select id="department_filter" class="form-control">
+                        <option value="">All Departments</option>
+                        <option value="engineering">Engineering</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="sales">Sales</option>
+                        <option value="hr">Human Resources</option>
+                        <option value="finance">Finance</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="job_type_filter">Job Type</label>
+                    <select id="job_type_filter" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="full_time">Full Time</option>
+                        <option value="part_time">Part Time</option>
+                        <option value="contract">Contract</option>
+                        <option value="internship">Internship</option>
+                    </select>
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-block" onclick="generateReport()">Generate Report</button>
+                <button type="button" class="btn btn-secondary btn-block mt-2" onclick="resetFilters()">Reset Filters</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="reports-content">
+        <div class="overview-metrics">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value">{{ metrics.total_jobs|default(0) }}</div>
+                            <div class="metric-label">Active Jobs</div>
+                            <div class="metric-change positive">+12% from last month</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value">{{ metrics.total_applications|default(0) }}</div>
+                            <div class="metric-label">Total Applications</div>
+                            <div class="metric-change positive">+8% from last month</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value">{{ metrics.hired_candidates|default(0) }}</div>
+                            <div class="metric-label">Hired Candidates</div>
+                            <div class="metric-change positive">+15% from last month</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value">{{ metrics.avg_time_to_hire|default(0) }}</div>
+                            <div class="metric-label">Avg. Time to Hire (days)</div>
+                            <div class="metric-change negative">-3 days from last month</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Application Trends</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="applicationTrendsChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Application Status Distribution</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="statusDistributionChart" width="300" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Top Performing Jobs</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Job Title</th>
+                                        <th>Applications</th>
+                                        <th>Conversion Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for job in top_jobs|default([]) %}
+                                    <tr>
+                                        <td>{{ job.title }}</td>
+                                        <td>{{ job.application_count }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: {{ job.conversion_rate }}%">
+                                                    {{ job.conversion_rate }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Recruitment Funnel</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="funnel-chart">
+                            <div class="funnel-stage">
+                                <div class="funnel-bar" style="width: 100%;">
+                                    <span class="funnel-label">Applications Received</span>
+                                    <span class="funnel-value">{{ funnel.applications|default(0) }}</span>
+                                </div>
+                            </div>
+                            <div class="funnel-stage">
+                                <div class="funnel-bar" style="width: 75%;">
+                                    <span class="funnel-label">Screened</span>
+                                    <span class="funnel-value">{{ funnel.screened|default(0) }}</span>
+                                </div>
+                            </div>
+                            <div class="funnel-stage">
+                                <div class="funnel-bar" style="width: 45%;">
+                                    <span class="funnel-label">Interviewed</span>
+                                    <span class="funnel-value">{{ funnel.interviewed|default(0) }}</span>
+                                </div>
+                            </div>
+                            <div class="funnel-stage">
+                                <div class="funnel-bar" style="width: 25%;">
+                                    <span class="funnel-label">Offers Made</span>
+                                    <span class="funnel-value">{{ funnel.offers|default(0) }}</span>
+                                </div>
+                            </div>
+                            <div class="funnel-stage">
+                                <div class="funnel-bar" style="width: 20%;">
+                                    <span class="funnel-label">Hired</span>
+                                    <span class="funnel-value">{{ funnel.hired|default(0) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Detailed Application Report</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="detailedReportTable">
+                                <thead>
+                                    <tr>
+                                        <th>Job Title</th>
+                                        <th>Department</th>
+                                        <th>Posted Date</th>
+                                        <th>Applications</th>
+                                        <th>Shortlisted</th>
+                                        <th>Interviewed</th>
+                                        <th>Hired</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for job_report in detailed_report|default([]) %}
+                                    <tr>
+                                        <td>{{ job_report.title }}</td>
+                                        <td>{{ job_report.department }}</td>
+                                        <td>{{ job_report.posted_date|date }}</td>
+                                        <td>{{ job_report.applications_count }}</td>
+                                        <td>{{ job_report.shortlisted_count }}</td>
+                                        <td>{{ job_report.interviewed_count }}</td>
+                                        <td>{{ job_report.hired_count }}</td>
+                                        <td>
+                                            {% if job_report.status == 'active' %}
+                                                <span class="badge badge-success">Active</span>
+                                            {% elif job_report.status == 'closed' %}
+                                                <span class="badge badge-secondary">Closed</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">{{ job_report.status|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .reports-container {
+        display: flex;
+        gap: 2rem;
+    }
+    
+    .reports-filters {
+        width: 300px;
+        flex-shrink: 0;
+    }
+    
+    .reports-content {
+        flex: 1;
+    }
+    
+    .overview-metrics {
+        margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .metric-content {
+        flex: 1;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .metric-label {
+        color: var(--gray-color);
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .metric-change {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .metric-change.positive {
+        color: var(--success-color);
+    }
+    
+    .metric-change.negative {
+        color: var(--danger-color);
+    }
+    
+    .funnel-chart {
+        padding: 1rem 0;
+    }
+    
+    .funnel-stage {
+        margin-bottom: 1rem;
+    }
+    
+    .funnel-bar {
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+    }
+    
+    .funnel-label {
+        font-size: 0.875rem;
+    }
+    
+    .funnel-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    @media (max-width: 992px) {
+        .reports-container {
+            flex-direction: column;
+        }
+        
+        .reports-filters {
+            width: 100%;
+        }
+        
+        .overview-metrics .col-md-3 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Application Trends Chart
+    const trendsCtx = document.getElementById('applicationTrendsChart').getContext('2d');
+    const applicationTrendsChart = new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Applications',
+                data: [65, 59, 80, 81, 56, 85],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Hired',
+                data: [12, 15, 18, 20, 14, 22],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusDistributionChart').getContext('2d');
+    const statusDistributionChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pending', 'Under Review', 'Shortlisted', 'Interviewed', 'Hired', 'Rejected'],
+            datasets: [{
+                data: [30, 25, 15, 12, 8, 10],
+                backgroundColor: [
+                    '#ffeaa7',
+                    '#74b9ff',
+                    '#00b894',
+                    '#fdcb6e',
+                    '#6c5ce7',
+                    '#e17055'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    function updateDateRange() {
+        const dateRange = document.getElementById('date_range').value;
+        const customRange = document.getElementById('custom_date_range');
+        
+        if (dateRange === 'custom') {
+            customRange.style.display = 'block';
+        } else {
+            customRange.style.display = 'none';
+        }
+    }
+    
+    function generateReport() {
+        // Implement report generation logic
+        console.log('Generating report with current filters...');
+        // This would typically make an AJAX call to update the charts and data
+    }
+    
+    function resetFilters() {
+        document.getElementById('date_range').value = 'last_30_days';
+        document.getElementById('department_filter').value = '';
+        document.getElementById('job_type_filter').value = '';
+        updateDateRange();
+        generateReport();
+    }
+    
+    function exportReport() {
+        // Implement report export functionality
+        window.location.href = '/hr/reports/export';
+    }
+    
+    function scheduleReport() {
+        // Implement scheduled report functionality
+        alert('Schedule report functionality would be implemented here');
+    }
+</script>
+{% endblock %}

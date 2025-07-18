@@ -1,0 +1,4 @@
+{
+  "subject": "Application Status Update: {{job_title}}",
+  "body": "\n                <h2>Application Status Update</h2>\n                <p>Dear {{user_name}},</p>\n                <p>Your application for <strong>{{job_title}}</strong> at <strong>{{company}}</strong> has been updated.</p>\n                <p>Status: <strong>{{old_status}}</strong> \u2192 <strong>{{new_status}}</strong></p>\n                <p>{{additional_message}}</p>\n                <p>You can view your application details in your dashboard for more information.</p>\n                <p>Best regards,<br>The Job Application Agent Team</p>\n                "
+}

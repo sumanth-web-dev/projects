@@ -1,0 +1,384 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Applications Management - HR Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+<li><a href="{{ url_for('hr.applications') }}" class="active"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('hr.candidates') }}"><i class="fas fa-users"></i> Candidates</a></li>
+<li><a href="{{ url_for('hr.interviews') }}"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('hr.campus_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('hr.reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+<li><a href="{{ url_for('hr.talent_pool') }}"><i class="fas fa-database"></i> Talent Pool</a></li>
+<li><a href="{{ url_for('hr.job_descriptions') }}"><i class="fas fa-file-alt"></i> Job Descriptions</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Applications Management{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" onclick="bulkAction()"><i class="fas fa-tasks"></i> Bulk Actions</button>
+<button class="btn btn-success" onclick="exportApplications()"><i class="fas fa-download"></i> Export</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="applications-container">
+    <div class="applications-filters">
+        <div class="card">
+            <div class="card-header">
+                <h3>Filter Applications</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="status_filter">Status</label>
+                    <select id="status_filter" class="form-control" onchange="filterApplications()">
+                        <option value="">All Statuses</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="under_review">Under Review</option>
+                        <option value="shortlisted">Shortlisted</option>
+                        <option value="interview_scheduled">Interview Scheduled</option>
+                        <option value="offer_received">Offer Received</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="job_filter">Job Position</label>
+                    <select id="job_filter" class="form-control" onchange="filterApplications()">
+                        <option value="">All Jobs</option>
+                        {% for job in jobs|default([]) %}
+                        <option value="{{ job.id }}">{{ job.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date_filter">Date Range</label>
+                    <select id="date_filter" class="form-control" onchange="filterApplications()">
+                        <option value="">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="search_term">Search</label>
+                    <input type="text" id="search_term" class="form-control" placeholder="Search by candidate name or email..." onkeyup="searchApplications()">
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-block" onclick="applyFilters()">Apply Filters</button>
+                <button type="button" class="btn btn-secondary btn-block mt-2" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Quick Stats</h3>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.total_applications|default(0) }}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.new_applications|default(0) }}</div>
+                        <div class="stat-label">New</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.under_review|default(0) }}</div>
+                        <div class="stat-label">Under Review</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.shortlisted|default(0) }}</div>
+                        <div class="stat-label">Shortlisted</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="applications-list">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="applicationsTable">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                </th>
+                                <th>Candidate</th>
+                                <th>Job Position</th>
+                                <th>Status</th>
+                                <th>Applied Date</th>
+                                <th>Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for application in applications|default([]) %}
+                            <tr class="application-row" 
+                                data-status="{{ application.status }}"
+                                data-job-id="{{ application.job.id }}"
+                                data-candidate="{{ application.user.email|lower }}"
+                                data-date="{{ application.submitted_at|date }}">
+                                <td>
+                                    <input type="checkbox" class="application-checkbox" value="{{ application.id }}">
+                                </td>
+                                <td>
+                                    <div class="candidate-info">
+                                        <strong>{{ application.user.personal_data.first_name|default('') }} {{ application.user.personal_data.last_name|default('') }}</strong>
+                                        <br><small class="text-muted">{{ application.user.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong>{{ application.job.title }}</strong>
+                                    <br><small class="text-muted">{{ application.job.company }}</small>
+                                </td>
+                                <td>
+                                    {% if application.status == 'submitted' %}
+                                        <span class="badge badge-info">Submitted</span>
+                                    {% elif application.status == 'under_review' %}
+                                        <span class="badge badge-primary">Under Review</span>
+                                    {% elif application.status == 'shortlisted' %}
+                                        <span class="badge badge-success">Shortlisted</span>
+                                    {% elif application.status == 'interview_scheduled' %}
+                                        <span class="badge badge-warning">Interview Scheduled</span>
+                                    {% elif application.status == 'offer_received' %}
+                                        <span class="badge badge-success">Offer Received</span>
+                                    {% elif application.status == 'rejected' %}
+                                        <span class="badge badge-danger">Rejected</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ application.status|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ application.submitted_at|date }}</td>
+                                <td>
+                                    {% if application.score %}
+                                        <div class="score-badge score-{{ application.score_class }}">
+                                            {{ application.score }}%
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Not scored</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('hr.application_detail', application_id=application.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-secondary dropdown-toggle" data-toggle="dropdown">
+                                                <i class="fas fa-cog"></i>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="#" onclick="updateStatus({{ application.id }}, 'under_review')">
+                                                    <i class="fas fa-search"></i> Review
+                                                </a>
+                                                <a class="dropdown-item" href="#" onclick="updateStatus({{ application.id }}, 'shortlisted')">
+                                                    <i class="fas fa-star"></i> Shortlist
+                                                </a>
+                                                <a class="dropdown-item" href="#" onclick="scheduleInterview({{ application.id }})">
+                                                    <i class="fas fa-calendar"></i> Schedule Interview
+                                                </a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#" onclick="updateStatus({{ application.id }}, 'rejected')">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="no-applications">
+                                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                                        <h4>No applications found</h4>
+                                        <p>Applications will appear here once candidates start applying to your jobs.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.applications-container {
+    display: flex;
+    gap: 2rem;
+}
+.applications-filters {
+    width: 300px;
+    flex-shrink: 0;
+}
+.applications-list {
+    flex: 1;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.stat-item {
+    text-align: center;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+.candidate-info strong {
+    color: var(--dark-color);
+}
+.score-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.score-high { background-color: #d4edda; color: #155724; }
+.score-medium { background-color: #fff3cd; color: #856404; }
+.score-low { background-color: #f8d7da; color: #721c24; }
+.no-applications {
+    padding: 3rem;
+}
+.application-row.hidden {
+    display: none;
+}
+@media (max-width: 992px) {
+    .applications-container {
+        flex-direction: column;
+    }
+    .applications-filters {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+function filterApplications() {
+    const statusFilter = document.getElementById('status_filter').value;
+    const jobFilter = document.getElementById('job_filter').value;
+    const dateFilter = document.getElementById('date_filter').value;
+    const rows = document.querySelectorAll('.application-row');
+    
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const jobId = row.dataset.jobId;
+        const date = row.dataset.date;
+        
+        let statusMatch = !statusFilter || status === statusFilter;
+        let jobMatch = !jobFilter || jobId === jobFilter;
+        let dateMatch = true; // Implement date filtering logic as needed
+        
+        if (statusMatch && jobMatch && dateMatch) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
+function searchApplications() {
+    const searchTerm = document.getElementById('search_term').value.toLowerCase();
+    const rows = document.querySelectorAll('.application-row');
+    
+    rows.forEach(row => {
+        const candidate = row.dataset.candidate;
+        if (candidate.includes(searchTerm)) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
+function applyFilters() {
+    filterApplications();
+    searchApplications();
+}
+
+function resetFilters() {
+    document.getElementById('status_filter').value = '';
+    document.getElementById('job_filter').value = '';
+    document.getElementById('date_filter').value = '';
+    document.getElementById('search_term').value = '';
+    const rows = document.querySelectorAll('.application-row');
+    rows.forEach(row => {
+        row.classList.remove('hidden');
+    });
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.application-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+}
+
+function updateStatus(applicationId, newStatus) {
+    if (confirm(`Are you sure you want to update this application status to ${newStatus.replace('_', ' ')}?`)) {
+        fetch(`/hr/applications/${applicationId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating application status');
+            }
+        })
+        .catch(error => {
+            alert('Error updating application status');
+        });
+    }
+}
+
+function scheduleInterview(applicationId) {
+    window.location.href = `/hr/interviews/schedule?application_id=${applicationId}`;
+}
+
+function bulkAction() {
+    const selectedApplications = Array.from(document.querySelectorAll('.application-checkbox:checked')).map(cb => cb.value);
+    if (selectedApplications.length === 0) {
+        alert('Please select at least one application');
+        return;
+    }
+    
+    const action = prompt('Enter action (review, shortlist, reject):');
+    if (action && ['review', 'shortlist', 'reject'].includes(action)) {
+        // Implement bulk action
+        console.log('Bulk action:', action, 'for applications:', selectedApplications);
+    }
+}
+
+function exportApplications() {
+    window.location.href = '/hr/applications/export';
+}
+</script>
+{% endblock %}

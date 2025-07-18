@@ -3,7 +3,15 @@
 {% block content %}
 <div class="dashboard-container">
     <div class="sidebar">
-        <h2>Job Application Agent</h2>
+        <h2>
+            {% if user and user.personal_data and user.personal_data.first_name %}
+                Welcome, {{ user.personal_data.first_name }}
+            {% elif user and user.personal_data and user.personal_data.name %}
+                Welcome, {{ user.personal_data.name }}
+            {% else %}
+                Welcome, User
+            {% endif %}
+        </h2>
         <ul>
             {% block sidebar_items %}
             <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> Home</a></li>

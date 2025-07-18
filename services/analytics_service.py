@@ -1,423 +1,495 @@
 """
-Analytics service for tracking and analyzing system usage and metrics.
-
-This module provides functionality for collecting, analyzing, and reporting on
-various metrics related to user activity, job applications, and system performance.
+Analytics service for generating HR reports and insights.
 """
-import logging
+import datetime
+import csv
 import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
-from sqlalchemy import text, func
-from models.database import db
+from typing import Dict, List, Optional
+from sqlalchemy import desc, func, and_, or_, extract
 from models.user import User
-from models.job import Job
-from models.application import Application, ApplicationStatus
-
-# Set up logging
-logger = logging.getLogger(__name__)
+from models.job import Job, JobSkill
+from models.application import Application, ApplicationStatus, Interview
+from models.database import db
 
 
 class AnalyticsService:
-    """Service for tracking and analyzing system metrics."""
-    
-    def __init__(self, app=None):
-        """Initialize the analytics service.
-        
-        Args:
-            app: Flask application instance for configuration
-        """
-        self.app = app
-        self._analytics_log_path = None
-        
-        if app is not None:
-            self.init_app(app)
+    """Service for generating analytics and reports."""
     
     def init_app(self, app):
-        """Initialize the analytics service with a Flask app.
-        
-        Args:
-            app: Flask application instance
-        """
-        self.app = app
-        
-        # Set up analytics logging
-        import os
-        log_dir = os.path.join(app.instance_path, 'logs')
-        os.makedirs(log_dir, exist_ok=True)
-        self._analytics_log_path = os.path.join(log_dir, 'analytics.log')
+        """Initialize the analytics service with the Flask app."""
+        # No initialization needed for now
+        pass
     
-    def log_event(self, event_type: str, user_id: Optional[str] = None, 
-                 details: Optional[Dict[str, Any]] = None) -> bool:
-        """Log an analytics event.
-        
-        Args:
-            event_type: Type of event (e.g., 'page_view', 'job_application', 'search')
-            user_id: ID of the user (if authenticated)
-            details: Additional details about the event
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        if not self._analytics_log_path:
-            return False
-        
+    def get_hiring_funnel_data(self) -> Dict:
+        """Get hiring funnel statistics."""
         try:
-            # Create log entry
-            log_entry = {
-                'timestamp': datetime.utcnow().isoformat(),
-                'event_type': event_type,
-                'user_id': user_id,
-                'details': details or {}
-            }
-            
-            # Write to log file
-            with open(self._analytics_log_path, 'a') as f:
-                f.write(json.dumps(log_entry) + '\n')
-            
-            return True
-        except Exception as e:
-            logger.error(f"Error logging analytics event: {str(e)}")
-            return False
-    
-    def get_user_metrics(self, days: int = 30) -> Dict[str, Any]:
-        """Get user-related metrics.
-        
-        Args:
-            days: Number of days to include in the metrics
-            
-        Returns:
-            Dict[str, Any]: User metrics
-        """
-        try:
-            # Calculate date range
-            end_date = datetime.utcnow()
-            start_date = end_date - timedelta(days=days)
-            
-            # Get total users
-            total_users = User.query.count()
-            
-            # Get active users
-            active_users = User.query.filter_by(is_active=True).count()
-            
-            # Get new users in date range
-            new_users = User.query.filter(
-                User.created_at >= start_date,
-                User.created_at <= end_date
+            # Get applications count by status
+            applications = Application.query.count()
+            screened = Application.query.filter(
+                Application.status.in_([
+                    ApplicationStatus.UNDER_REVIEW,
+                    ApplicationStatus.SHORTLISTED,
+                    ApplicationStatus.INTERVIEW_SCHEDULED,
+                    ApplicationStatus.INTERVIEWED,
+                    ApplicationStatus.OFFER_PENDING,
+                    ApplicationStatus.OFFER_RECEIVED,
+                    ApplicationStatus.ACCEPTED
+                ])
             ).count()
             
-            # Get user roles distribution
-            role_distribution = self._get_role_distribution()
-            
-            return {
-                'total_users': total_users,
-                'active_users': active_users,
-                'new_users': new_users,
-                'role_distribution': role_distribution,
-                'date_range': {
-                    'start': start_date.isoformat(),
-                    'end': end_date.isoformat(),
-                    'days': days
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error getting user metrics: {str(e)}")
-            return {}
-    
-    def _get_role_distribution(self) -> Dict[str, int]:
-        """Get distribution of user roles.
-        
-        Returns:
-            Dict[str, int]: Count of users by role
-        """
-        try:
-            # This is a simplified approach; in a real system, you would query the database
-            # For this example, we'll use a placeholder implementation
-            return {
-                'admin': User.query.filter(User.personal_data.contains('"roles": ["admin"]')).count(),
-                'hr': User.query.filter(User.personal_data.contains('"roles": ["hr"]')).count(),
-                'student': User.query.filter(User.personal_data.contains('"roles": ["student"]')).count(),
-                'user': User.query.filter(User.personal_data.contains('"roles": ["user"]')).count()
-            }
-        except Exception as e:
-            logger.error(f"Error getting role distribution: {str(e)}")
-            return {}
-    
-    def get_job_metrics(self, days: int = 30) -> Dict[str, Any]:
-        """Get job-related metrics.
-        
-        Args:
-            days: Number of days to include in the metrics
-            
-        Returns:
-            Dict[str, Any]: Job metrics
-        """
-        try:
-            # Calculate date range
-            end_date = datetime.utcnow()
-            start_date = end_date - timedelta(days=days)
-            
-            # Get total jobs
-            total_jobs = Job.query.count()
-            
-            # Get active jobs
-            active_jobs = Job.query.filter_by(is_active=True).count()
-            
-            # Get new jobs in date range
-            new_jobs = Job.query.filter(
-                Job.created_at >= start_date,
-                Job.created_at <= end_date
+            interviewed = Application.query.filter(
+                Application.status.in_([
+                    ApplicationStatus.INTERVIEW_SCHEDULED,
+                    ApplicationStatus.INTERVIEWED,
+                    ApplicationStatus.OFFER_PENDING,
+                    ApplicationStatus.OFFER_RECEIVED,
+                    ApplicationStatus.ACCEPTED
+                ])
             ).count()
             
-            # Get jobs by category
-            jobs_by_category = self._get_jobs_by_category()
-            
-            return {
-                'total_jobs': total_jobs,
-                'active_jobs': active_jobs,
-                'new_jobs': new_jobs,
-                'jobs_by_category': jobs_by_category,
-                'date_range': {
-                    'start': start_date.isoformat(),
-                    'end': end_date.isoformat(),
-                    'days': days
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error getting job metrics: {str(e)}")
-            return {}
-    
-    def _get_jobs_by_category(self) -> Dict[str, int]:
-        """Get distribution of jobs by category.
-        
-        Returns:
-            Dict[str, int]: Count of jobs by category
-        """
-        try:
-            # Query jobs by category
-            result = db.session.query(
-                Job.category_id,
-                func.count(Job.id)
-            ).group_by(Job.category_id).all()
-            
-            # Convert to dictionary
-            jobs_by_category = {}
-            for category_id, count in result:
-                if category_id:
-                    from models.job import JobCategory
-                    category = JobCategory.query.get(category_id)
-                    if category:
-                        jobs_by_category[category.name] = count
-                else:
-                    jobs_by_category['Uncategorized'] = count
-            
-            return jobs_by_category
-        except Exception as e:
-            logger.error(f"Error getting jobs by category: {str(e)}")
-            return {}
-    
-    def get_application_metrics(self, days: int = 30) -> Dict[str, Any]:
-        """Get application-related metrics.
-        
-        Args:
-            days: Number of days to include in the metrics
-            
-        Returns:
-            Dict[str, Any]: Application metrics
-        """
-        try:
-            # Calculate date range
-            end_date = datetime.utcnow()
-            start_date = end_date - timedelta(days=days)
-            
-            # Get total applications
-            total_applications = Application.query.count()
-            
-            # Get new applications in date range
-            new_applications = Application.query.filter(
-                Application.created_at >= start_date,
-                Application.created_at <= end_date
+            offers = Application.query.filter(
+                Application.status.in_([
+                    ApplicationStatus.OFFER_PENDING,
+                    ApplicationStatus.OFFER_RECEIVED,
+                    ApplicationStatus.ACCEPTED
+                ])
             ).count()
             
-            # Get applications by status
-            applications_by_status = self._get_applications_by_status()
-            
-            # Calculate conversion rates
-            conversion_rates = self._calculate_conversion_rates()
+            hired = Application.query.filter_by(status=ApplicationStatus.ACCEPTED).count()
             
             return {
-                'total_applications': total_applications,
-                'new_applications': new_applications,
-                'applications_by_status': applications_by_status,
-                'conversion_rates': conversion_rates,
-                'date_range': {
-                    'start': start_date.isoformat(),
-                    'end': end_date.isoformat(),
-                    'days': days
-                }
+                'applications': applications,
+                'screened': screened,
+                'interviewed': interviewed,
+                'offers': offers,
+                'hired': hired
             }
-        except Exception as e:
-            logger.error(f"Error getting application metrics: {str(e)}")
-            return {}
-    
-    def _get_applications_by_status(self) -> Dict[str, int]:
-        """Get distribution of applications by status.
         
-        Returns:
-            Dict[str, int]: Count of applications by status
-        """
+        except Exception as e:
+            return {
+                'applications': 0,
+                'screened': 0,
+                'interviewed': 0,
+                'offers': 0,
+                'hired': 0
+            }
+    
+    def get_top_performing_jobs(self, limit: int = 5) -> List[Dict]:
+        """Get top performing jobs by application count."""
         try:
-            # Query applications by status
-            result = db.session.query(
+            top_jobs = db.session.query(
+                Job.id,
+                Job.title,
+                Job.company,
+                func.count(Application.id).label('application_count')
+            ).join(Application)\
+             .group_by(Job.id, Job.title, Job.company)\
+             .order_by(desc('application_count'))\
+             .limit(limit)\
+             .all()
+            
+            result = []
+            for job in top_jobs:
+                # Calculate conversion rate (hired / applications)
+                hired_count = Application.query.filter(
+                    and_(
+                        Application.job_id == job.id,
+                        Application.status == ApplicationStatus.ACCEPTED
+                    )
+                ).count()
+                
+                conversion_rate = (hired_count / job.application_count * 100) if job.application_count > 0 else 0
+                
+                result.append({
+                    'id': job.id,
+                    'title': job.title,
+                    'company': job.company,
+                    'application_count': job.application_count,
+                    'conversion_rate': round(conversion_rate, 2)
+                })
+            
+            return result
+        
+        except Exception as e:
+            return []
+    
+    def get_job_analytics(self, job_id: str) -> Dict:
+        """Get analytics for a specific job."""
+        try:
+            job = Job.query.get(job_id)
+            if not job:
+                return {}
+            
+            # Get application statistics
+            total_applications = Application.query.filter_by(job_id=job_id).count()
+            
+            status_counts = db.session.query(
                 Application.status,
-                func.count(Application.id)
-            ).group_by(Application.status).all()
+                func.count(Application.id).label('count')
+            ).filter_by(job_id=job_id)\
+             .group_by(Application.status)\
+             .all()
             
-            # Convert to dictionary
-            applications_by_status = {}
-            for status, count in result:
-                applications_by_status[status.value] = count
+            # Get application timeline (applications per day)
+            timeline = db.session.query(
+                func.date(Application.created_at).label('date'),
+                func.count(Application.id).label('count')
+            ).filter_by(job_id=job_id)\
+             .group_by(func.date(Application.created_at))\
+             .order_by('date')\
+             .all()
             
-            return applications_by_status
+            # Calculate average time to hire
+            hired_applications = Application.query.filter(
+                and_(
+                    Application.job_id == job_id,
+                    Application.status == ApplicationStatus.ACCEPTED
+                )
+            ).all()
+            
+            avg_time_to_hire = 0
+            if hired_applications:
+                total_days = 0
+                for app in hired_applications:
+                    if app.submitted_at and app.last_updated_at:
+                        days = (app.last_updated_at - app.submitted_at).days
+                        total_days += days
+                
+                avg_time_to_hire = total_days / len(hired_applications)
+            
+            return {
+                'job_id': job_id,
+                'total_applications': total_applications,
+                'status_distribution': [{'status': sc[0].value, 'count': sc[1]} for sc in status_counts],
+                'application_timeline': [{'date': str(tl[0]), 'count': tl[1]} for tl in timeline],
+                'avg_time_to_hire': round(avg_time_to_hire, 1),
+                'views': 0,  # Placeholder - would track job views
+                'conversion_rate': 0  # Placeholder - would calculate view to application rate
+            }
+        
         except Exception as e:
-            logger.error(f"Error getting applications by status: {str(e)}")
             return {}
     
-    def _calculate_conversion_rates(self) -> Dict[str, float]:
-        """Calculate application conversion rates.
-        
-        Returns:
-            Dict[str, float]: Conversion rates
-        """
+    def get_overview_report(self, date_range: str, department: str = '', job_type: str = '') -> Dict:
+        """Generate overview report."""
         try:
-            # Get counts by status
-            submitted = Application.query.filter_by(status=ApplicationStatus.SUBMITTED).count()
-            shortlisted = Application.query.filter_by(status=ApplicationStatus.SHORTLISTED).count()
-            interviewed = Application.query.filter_by(status=ApplicationStatus.INTERVIEWED).count()
-            offered = Application.query.filter_by(status=ApplicationStatus.OFFER_RECEIVED).count()
-            accepted = Application.query.filter_by(status=ApplicationStatus.ACCEPTED).count()
+            # Calculate date range
+            end_date = datetime.datetime.utcnow()
+            if date_range == 'last_7_days':
+                start_date = end_date - datetime.timedelta(days=7)
+            elif date_range == 'last_30_days':
+                start_date = end_date - datetime.timedelta(days=30)
+            elif date_range == 'last_90_days':
+                start_date = end_date - datetime.timedelta(days=90)
+            elif date_range == 'last_year':
+                start_date = end_date - datetime.timedelta(days=365)
+            else:
+                start_date = end_date - datetime.timedelta(days=30)
+            
+            # Base query
+            query = Application.query.filter(
+                Application.created_at.between(start_date, end_date)
+            )
+            
+            # Apply filters
+            if department:
+                query = query.join(Job).filter(Job.company.ilike(f'%{department}%'))
+            
+            if job_type:
+                query = query.join(Job).filter(Job.job_type == job_type)
+            
+            # Get metrics
+            total_applications = query.count()
+            
+            hired = query.filter(Application.status == ApplicationStatus.ACCEPTED).count()
+            
+            rejected = query.filter(Application.status == ApplicationStatus.REJECTED).count()
+            
+            in_progress = query.filter(
+                Application.status.in_([
+                    ApplicationStatus.SUBMITTED,
+                    ApplicationStatus.UNDER_REVIEW,
+                    ApplicationStatus.SHORTLISTED,
+                    ApplicationStatus.INTERVIEW_SCHEDULED,
+                    ApplicationStatus.INTERVIEWED
+                ])
+            ).count()
             
             # Calculate rates
-            shortlist_rate = (shortlisted / submitted) if submitted > 0 else 0
-            interview_rate = (interviewed / shortlisted) if shortlisted > 0 else 0
-            offer_rate = (offered / interviewed) if interviewed > 0 else 0
-            acceptance_rate = (accepted / offered) if offered > 0 else 0
-            overall_success_rate = (accepted / submitted) if submitted > 0 else 0
+            hire_rate = (hired / total_applications * 100) if total_applications > 0 else 0
+            rejection_rate = (rejected / total_applications * 100) if total_applications > 0 else 0
+            
+            # Get top sources (placeholder)
+            top_sources = [
+                {'source': 'Company Website', 'applications': total_applications // 3},
+                {'source': 'LinkedIn', 'applications': total_applications // 4},
+                {'source': 'Job Boards', 'applications': total_applications // 5}
+            ]
             
             return {
-                'shortlist_rate': shortlist_rate,
-                'interview_rate': interview_rate,
-                'offer_rate': offer_rate,
-                'acceptance_rate': acceptance_rate,
-                'overall_success_rate': overall_success_rate
-            }
-        except Exception as e:
-            logger.error(f"Error calculating conversion rates: {str(e)}")
-            return {}
-    
-    def get_system_metrics(self, days: int = 30) -> Dict[str, Any]:
-        """Get system performance metrics.
-        
-        Args:
-            days: Number of days to include in the metrics
-            
-        Returns:
-            Dict[str, Any]: System metrics
-        """
-        try:
-            # This would typically collect metrics from logs or monitoring systems
-            # For this example, we'll return placeholder data
-            return {
-                'average_response_time': 120,  # ms
-                'error_rate': 0.02,  # 2%
-                'uptime': 0.998,  # 99.8%
-                'peak_concurrent_users': 250,
-                'date_range': {
-                    'start': (datetime.utcnow() - timedelta(days=days)).isoformat(),
-                    'end': datetime.utcnow().isoformat(),
-                    'days': days
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error getting system metrics: {str(e)}")
-            return {}
-    
-    def get_search_analytics(self, days: int = 30) -> Dict[str, Any]:
-        """Get search-related analytics.
-        
-        Args:
-            days: Number of days to include in the analytics
-            
-        Returns:
-            Dict[str, Any]: Search analytics
-        """
-        try:
-            # This would typically analyze search logs
-            # For this example, we'll return placeholder data
-            return {
-                'top_search_terms': [
-                    {'term': 'software engineer', 'count': 1250},
-                    {'term': 'data scientist', 'count': 980},
-                    {'term': 'product manager', 'count': 750},
-                    {'term': 'remote', 'count': 620},
-                    {'term': 'entry level', 'count': 580}
-                ],
-                'average_searches_per_user': 4.2,
-                'search_to_application_rate': 0.15,  # 15% of searches lead to applications
-                'date_range': {
-                    'start': (datetime.utcnow() - timedelta(days=days)).isoformat(),
-                    'end': datetime.utcnow().isoformat(),
-                    'days': days
-                }
-            }
-        except Exception as e:
-            logger.error(f"Error getting search analytics: {str(e)}")
-            return {}
-    
-    def get_dashboard_summary(self) -> Dict[str, Any]:
-        """Get summary metrics for the admin dashboard.
-        
-        Returns:
-            Dict[str, Any]: Dashboard summary metrics
-        """
-        try:
-            # Get key metrics
-            total_users = User.query.count()
-            active_users = User.query.filter_by(is_active=True).count()
-            total_jobs = Job.query.count()
-            active_jobs = Job.query.filter_by(is_active=True).count()
-            total_applications = Application.query.count()
-            
-            # Calculate recent activity (last 7 days)
-            seven_days_ago = datetime.utcnow() - timedelta(days=7)
-            new_users = User.query.filter(User.created_at >= seven_days_ago).count()
-            new_jobs = Job.query.filter(Job.created_at >= seven_days_ago).count()
-            new_applications = Application.query.filter(Application.created_at >= seven_days_ago).count()
-            
-            # Calculate user growth rate
-            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-            users_30_days_ago = User.query.filter(User.created_at < thirty_days_ago).count()
-            user_growth_rate = ((total_users - users_30_days_ago) / users_30_days_ago) if users_30_days_ago > 0 else 0
-            
-            return {
-                'total_users': total_users,
-                'active_users': active_users,
-                'total_jobs': total_jobs,
-                'active_jobs': active_jobs,
-                'total_applications': total_applications,
-                'recent_activity': {
-                    'new_users': new_users,
-                    'new_jobs': new_jobs,
-                    'new_applications': new_applications
+                'period': {
+                    'start': start_date.isoformat(),
+                    'end': end_date.isoformat(),
+                    'range': date_range
                 },
-                'growth_rates': {
-                    'user_growth_rate': user_growth_rate
+                'metrics': {
+                    'total_applications': total_applications,
+                    'hired': hired,
+                    'rejected': rejected,
+                    'in_progress': in_progress,
+                    'hire_rate': round(hire_rate, 2),
+                    'rejection_rate': round(rejection_rate, 2)
+                },
+                'top_sources': top_sources
+            }
+        
+        except Exception as e:
+            return {}
+    
+    def get_hiring_report(self, date_range: str, department: str = '', job_type: str = '') -> Dict:
+        """Generate hiring-focused report."""
+        try:
+            # Similar to overview but focused on hiring metrics
+            end_date = datetime.datetime.utcnow()
+            if date_range == 'last_30_days':
+                start_date = end_date - datetime.timedelta(days=30)
+            else:
+                start_date = end_date - datetime.timedelta(days=30)
+            
+            # Get hiring by month
+            hiring_by_month = db.session.query(
+                extract('year', Application.last_updated_at).label('year'),
+                extract('month', Application.last_updated_at).label('month'),
+                func.count(Application.id).label('count')
+            ).filter(
+                and_(
+                    Application.status == ApplicationStatus.ACCEPTED,
+                    Application.last_updated_at.between(start_date, end_date)
+                )
+            ).group_by('year', 'month').all()
+            
+            # Get average time to hire by job
+            time_to_hire = db.session.query(
+                Job.title,
+                func.avg(
+                    func.julianday(Application.last_updated_at) - 
+                    func.julianday(Application.submitted_at)
+                ).label('avg_days')
+            ).join(Application).filter(
+                and_(
+                    Application.status == ApplicationStatus.ACCEPTED,
+                    Application.submitted_at.isnot(None),
+                    Application.last_updated_at.between(start_date, end_date)
+                )
+            ).group_by(Job.title).all()
+            
+            return {
+                'hiring_by_month': [
+                    {
+                        'year': int(hbm[0]),
+                        'month': int(hbm[1]),
+                        'count': hbm[2]
+                    } for hbm in hiring_by_month
+                ],
+                'time_to_hire': [
+                    {
+                        'job_title': tth[0],
+                        'avg_days': round(tth[1], 1) if tth[1] else 0
+                    } for tth in time_to_hire
+                ]
+            }
+        
+        except Exception as e:
+            return {}
+    
+    def get_performance_report(self, date_range: str, department: str = '', job_type: str = '') -> Dict:
+        """Generate performance report."""
+        try:
+            # Get recruiter performance (placeholder)
+            recruiter_performance = [
+                {'name': 'John Doe', 'applications_reviewed': 45, 'hires': 8},
+                {'name': 'Jane Smith', 'applications_reviewed': 38, 'hires': 6},
+                {'name': 'Mike Johnson', 'applications_reviewed': 52, 'hires': 10}
+            ]
+            
+            # Get job posting performance
+            job_performance = db.session.query(
+                Job.title,
+                Job.company,
+                func.count(Application.id).label('applications'),
+                func.sum(
+                    func.case(
+                        [(Application.status == ApplicationStatus.ACCEPTED, 1)],
+                        else_=0
+                    )
+                ).label('hires')
+            ).join(Application)\
+             .group_by(Job.id, Job.title, Job.company)\
+             .order_by(desc('applications'))\
+             .limit(10)\
+             .all()
+            
+            return {
+                'recruiter_performance': recruiter_performance,
+                'job_performance': [
+                    {
+                        'title': jp[0],
+                        'company': jp[1],
+                        'applications': jp[2],
+                        'hires': jp[3] or 0,
+                        'conversion_rate': round((jp[3] or 0) / jp[2] * 100, 2) if jp[2] > 0 else 0
+                    } for jp in job_performance
+                ]
+            }
+        
+        except Exception as e:
+            return {}
+    
+    def export_report(self, report_type: str, format_type: str = 'csv') -> str:
+        """Export report data to file."""
+        try:
+            # Generate report data
+            if report_type == 'overview':
+                data = self.get_overview_report('last_30_days')
+            elif report_type == 'hiring':
+                data = self.get_hiring_report('last_30_days')
+            elif report_type == 'performance':
+                data = self.get_performance_report('last_30_days')
+            else:
+                data = self.get_overview_report('last_30_days')
+            
+            # Generate filename
+            timestamp = datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            filename = f"{report_type}_report_{timestamp}.{format_type}"
+            filepath = f"exports/{filename}"
+            
+            # Create exports directory if it doesn't exist
+            import os
+            os.makedirs('exports', exist_ok=True)
+            
+            if format_type == 'csv':
+                self._export_to_csv(data, filepath)
+            elif format_type == 'json':
+                self._export_to_json(data, filepath)
+            else:
+                raise ValueError(f"Unsupported format: {format_type}")
+            
+            return filepath
+        
+        except Exception as e:
+            raise e
+    
+    def _export_to_csv(self, data: Dict, filepath: str):
+        """Export data to CSV format."""
+        with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+            if 'metrics' in data:
+                # Overview report format
+                writer = csv.writer(csvfile)
+                writer.writerow(['Metric', 'Value'])
+                
+                metrics = data['metrics']
+                for key, value in metrics.items():
+                    writer.writerow([key.replace('_', ' ').title(), value])
+            
+            elif 'job_performance' in data:
+                # Performance report format
+                writer = csv.writer(csvfile)
+                writer.writerow(['Job Title', 'Company', 'Applications', 'Hires', 'Conversion Rate'])
+                
+                for job in data['job_performance']:
+                    writer.writerow([
+                        job['title'],
+                        job['company'],
+                        job['applications'],
+                        job['hires'],
+                        f"{job['conversion_rate']}%"
+                    ])
+    
+    def _export_to_json(self, data: Dict, filepath: str):
+        """Export data to JSON format."""
+        with open(filepath, 'w', encoding='utf-8') as jsonfile:
+            json.dump(data, jsonfile, indent=2, default=str)
+    
+    def get_diversity_metrics(self) -> Dict:
+        """Get diversity and inclusion metrics."""
+        try:
+            # This would typically analyze demographic data
+            # For now, return placeholder data
+            return {
+                'gender_distribution': {
+                    'male': 60,
+                    'female': 35,
+                    'other': 5
+                },
+                'age_distribution': {
+                    '18-25': 25,
+                    '26-35': 45,
+                    '36-45': 20,
+                    '46+': 10
+                },
+                'education_distribution': {
+                    'bachelors': 50,
+                    'masters': 35,
+                    'phd': 10,
+                    'other': 5
                 }
             }
+        
         except Exception as e:
-            logger.error(f"Error getting dashboard summary: {str(e)}")
             return {}
-
-
-# Create a singleton instance
+    
+    def get_salary_analytics(self) -> Dict:
+        """Get salary analytics."""
+        try:
+            # Get salary ranges from job postings
+            salary_data = db.session.query(
+                Job.job_type,
+                func.avg(Job.salary_min).label('avg_min'),
+                func.avg(Job.salary_max).label('avg_max')
+            ).filter(
+                and_(
+                    Job.salary_min.isnot(None),
+                    Job.salary_max.isnot(None)
+                )
+            ).group_by(Job.job_type).all()
+            
+            return {
+                'salary_by_type': [
+                    {
+                        'job_type': sd[0],
+                        'avg_min': round(sd[1], 2) if sd[1] else 0,
+                        'avg_max': round(sd[2], 2) if sd[2] else 0
+                    } for sd in salary_data
+                ]
+            }
+        
+        except Exception as e:
+            return {}
+    
+    def get_skills_demand_analysis(self) -> Dict:
+        """Analyze skills demand across job postings."""
+        try:
+            # Get most in-demand skills
+            skills_demand = db.session.query(
+                JobSkill.skill_name,
+                func.count(JobSkill.job_id).label('demand_count')
+            ).join(Job).filter(Job.is_active == True)\
+             .group_by(JobSkill.skill_name)\
+             .order_by(desc('demand_count'))\
+             .limit(20)\
+             .all()
+            
+            return {
+                'top_skills': [
+                    {
+                        'skill': sd[0],
+                        'demand_count': sd[1]
+                    } for sd in skills_demand
+                ]
+            }
+        
+        except Exception as e:
+            return {}
+            
+# Create service instance
 analytics_service = AnalyticsService()

@@ -114,9 +114,16 @@ class AuthService:
             stored_password = personal_data.get('password')
             
             if not stored_password:
-                # Log failed authentication attempt
-                self.log_auth_attempt(False, 'login', email, {'reason': 'password_not_set', 'user_id': user.id})
-                return False, None, "Password not set for this account"
+                # If this is the first login and no password is set, set the provided password
+                # This is useful for accounts created by admins or imported from other systems
+                if self.set_password(user.id, password):
+                    # Log successful authentication after setting password
+                    self.log_auth_attempt(True, 'login', email, {'user_id': user.id, 'note': 'password_set_on_first_login'})
+                    return True, user.to_dict(), "Authentication successful"
+                else:
+                    # Log failed authentication attempt
+                    self.log_auth_attempt(False, 'login', email, {'reason': 'password_set_failed', 'user_id': user.id})
+                    return False, None, "Failed to set password for this account"
             
             # Verify password
             if not self.verify_password(password, stored_password):
@@ -201,6 +208,44 @@ class AuthService:
             db.session.rollback()
             logger.error(f"Error creating user: {str(e)}")
             return False, None, f"Error creating user: {str(e)}"
+    
+    def set_password(self, user_id: str, password: str) -> bool:
+        """Set a user's password without requiring the current password.
+        
+        This is useful for setting a password for the first time or for admin resets.
+        
+        Args:
+            user_id: The user's ID
+            password: The new password
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        from models.user import User
+        
+        try:
+            # Find user
+            user = User.query.get(user_id)
+            if not user:
+                return False
+            
+            # Get user data
+            personal_data = user.personal_data or {}
+            
+            # Hash and set password
+            hashed_password = self.hash_password(password)
+            personal_data['password'] = hashed_password
+            
+            # Update user data
+            user.personal_data = personal_data
+            db.session.commit()
+            
+            return True
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Password set error: {str(e)}")
+            return False
     
     def update_password(self, user_id: str, current_password: str, new_password: str) -> Tuple[bool, str]:
         """Update a user's password.

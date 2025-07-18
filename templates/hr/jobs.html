@@ -1,0 +1,259 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Job Management - HR Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('hr.jobs') }}" class="active"><i class="fas fa-briefcase"></i> Jobs</a></li>
+<li><a href="{{ url_for('hr.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('hr.candidates') }}"><i class="fas fa-users"></i> Candidates</a></li>
+<li><a href="{{ url_for('hr.interviews') }}"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('hr.campus_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('hr.reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+<li><a href="{{ url_for('hr.talent_pool') }}"><i class="fas fa-database"></i> Talent Pool</a></li>
+<li><a href="{{ url_for('hr.job_descriptions') }}"><i class="fas fa-file-alt"></i> Job Descriptions</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Job Management{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('hr.create_job') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Post New Job</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="jobs-container">
+    <div class="jobs-filters">
+        <div class="card">
+            <div class="card-header">
+                <h3>Filter Jobs</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="status_filter">Status</label>
+                    <select id="status_filter" class="form-control" onchange="filterJobs()">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                        <option value="closed">Closed</option>
+                        <option value="paused">Paused</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="type_filter">Job Type</label>
+                    <select id="type_filter" class="form-control" onchange="filterJobs()">
+                        <option value="">All Types</option>
+                        <option value="full-time">Full-time</option>
+                        <option value="part-time">Part-time</option>
+                        <option value="contract">Contract</option>
+                        <option value="internship">Internship</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="search_term">Search</label>
+                    <input type="text" id="search_term" class="form-control" placeholder="Search by title or company..." onkeyup="searchJobs()">
+                </div>
+                <button type="button" class="btn btn-primary btn-block" onclick="applyFilters()">Apply Filters</button>
+                <button type="button" class="btn btn-secondary btn-block mt-2" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="jobs-list">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="jobsTable">
+                        <thead>
+                            <tr>
+                                <th>Job Title</th>
+                                <th>Company</th>
+                                <th>Type</th>
+                                <th>Applications</th>
+                                <th>Status</th>
+                                <th>Posted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs|default([]) %}
+                            <tr class="job-row" 
+                                data-title="{{ job.title|lower }}" 
+                                data-company="{{ job.company|lower }}"
+                                data-type="{{ job.job_type }}"
+                                data-status="{{ job.status }}">
+                                <td>
+                                    <strong>{{ job.title }}</strong>
+                                    <br><small class="text-muted">{{ job.location }}</small>
+                                </td>
+                                <td>{{ job.company }}</td>
+                                <td>
+                                    <span class="badge badge-info">{{ job.job_type|title }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-primary">{{ job.applications_count|default(0) }}</span>
+                                </td>
+                                <td>
+                                    {% if job.status == 'active' %}
+                                        <span class="badge badge-success">Active</span>
+                                    {% elif job.status == 'draft' %}
+                                        <span class="badge badge-secondary">Draft</span>
+                                    {% elif job.status == 'closed' %}
+                                        <span class="badge badge-danger">Closed</span>
+                                    {% elif job.status == 'paused' %}
+                                        <span class="badge badge-warning">Paused</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ job.created_at|date }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('hr.edit_job', job_id=job.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{{ url_for('hr.applications') }}?job_id={{ job.id }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-warning" onclick="toggleJobStatus({{ job.id }}, '{{ job.status }}')">
+                                            {% if job.status == 'active' %}
+                                                <i class="fas fa-pause"></i>
+                                            {% else %}
+                                                <i class="fas fa-play"></i>
+                                            {% endif %}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="no-jobs">
+                                        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+                                        <h4>No jobs posted yet</h4>
+                                        <p>Create your first job posting to get started.</p>
+                                        <a href="{{ url_for('hr.create_job') }}" class="btn btn-primary">Post New Job</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.jobs-container {
+    display: flex;
+    gap: 2rem;
+}
+.jobs-filters {
+    width: 300px;
+    flex-shrink: 0;
+}
+.jobs-list {
+    flex: 1;
+}
+.no-jobs {
+    padding: 3rem;
+}
+.job-row.hidden {
+    display: none;
+}
+@media (max-width: 992px) {
+    .jobs-container {
+        flex-direction: column;
+    }
+    .jobs-filters {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+function filterJobs() {
+    const statusFilter = document.getElementById('status_filter').value;
+    const typeFilter = document.getElementById('type_filter').value;
+    const rows = document.querySelectorAll('.job-row');
+    
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const type = row.dataset.type;
+        let statusMatch = true;
+        let typeMatch = true;
+        
+        if (statusFilter) {
+            statusMatch = status === statusFilter;
+        }
+        if (typeFilter) {
+            typeMatch = type === typeFilter;
+        }
+        
+        if (statusMatch && typeMatch) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
+function searchJobs() {
+    const searchTerm = document.getElementById('search_term').value.toLowerCase();
+    const rows = document.querySelectorAll('.job-row');
+    
+    rows.forEach(row => {
+        const title = row.dataset.title;
+        const company = row.dataset.company;
+        
+        if (title.includes(searchTerm) || company.includes(searchTerm)) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
+function applyFilters() {
+    filterJobs();
+    searchJobs();
+}
+
+function resetFilters() {
+    document.getElementById('status_filter').value = '';
+    document.getElementById('type_filter').value = '';
+    document.getElementById('search_term').value = '';
+    const rows = document.querySelectorAll('.job-row');
+    rows.forEach(row => {
+        row.classList.remove('hidden');
+    });
+}
+
+function toggleJobStatus(jobId, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    
+    if (confirm(`Are you sure you want to ${newStatus} this job?`)) {
+        // This would make an AJAX call to update the job status
+        fetch(`/hr/jobs/${jobId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating job status');
+            }
+        })
+        .catch(error => {
+            alert('Error updating job status');
+        });
+    }
+}
+</script>
+{% endblock %}

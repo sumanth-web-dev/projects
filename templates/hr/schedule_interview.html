@@ -1,0 +1,467 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Schedule Interview - HR Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('hr.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('hr.jobs') }}"><i class="fas fa-briefcase"></i> Jobs</a></li>
+<li><a href="{{ url_for('hr.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('hr.candidates') }}"><i class="fas fa-users"></i> Candidates</a></li>
+<li><a href="{{ url_for('hr.interviews') }}" class="active"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('hr.campus_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('hr.reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Schedule Interview{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('hr.applications') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Applications</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="schedule-interview-container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Interview Details</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('hr.schedule_interview') }}">
+                        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                        <input type="hidden" name="application_id" value="{{ application.id }}">
+                        
+                        <div class="form-section">
+                            <h4>Interview Information</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="interview_type">Interview Type <span class="required">*</span></label>
+                                        <select id="interview_type" name="interview_type" class="form-control" required>
+                                            <option value="">Select Type</option>
+                                            <option value="phone">Phone Interview</option>
+                                            <option value="video">Video Interview</option>
+                                            <option value="in_person">In-Person Interview</option>
+                                            <option value="technical">Technical Interview</option>
+                                            <option value="panel">Panel Interview</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="interview_round">Interview Round</label>
+                                        <select id="interview_round" name="interview_round" class="form-control">
+                                            <option value="1">First Round</option>
+                                            <option value="2">Second Round</option>
+                                            <option value="3">Third Round</option>
+                                            <option value="final">Final Round</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="interview_date">Interview Date <span class="required">*</span></label>
+                                        <input type="date" id="interview_date" name="interview_date" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="interview_time">Interview Time <span class="required">*</span></label>
+                                        <input type="time" id="interview_time" name="interview_time" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="duration">Duration (minutes)</label>
+                                <select id="duration" name="duration" class="form-control">
+                                    <option value="30">30 minutes</option>
+                                    <option value="45">45 minutes</option>
+                                    <option value="60" selected>1 hour</option>
+                                    <option value="90">1.5 hours</option>
+                                    <option value="120">2 hours</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>Location & Meeting Details</h4>
+                            <div class="form-group">
+                                <label for="location">Location/Meeting Link</label>
+                                <input type="text" id="location" name="location" class="form-control" 
+                                       placeholder="Office address, Zoom link, or phone number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="meeting_instructions">Meeting Instructions</label>
+                                <textarea id="meeting_instructions" name="meeting_instructions" class="form-control" rows="3"
+                                          placeholder="Additional instructions for the candidate (e.g., what to bring, parking info, etc.)"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>Interviewers</h4>
+                            <div class="form-group">
+                                <label for="primary_interviewer">Primary Interviewer <span class="required">*</span></label>
+                                <select id="primary_interviewer" name="primary_interviewer" class="form-control" required>
+                                    <option value="">Select Interviewer</option>
+                                    {% for interviewer in interviewers|default([]) %}
+                                    <option value="{{ interviewer.id }}">{{ interviewer.name }} - {{ interviewer.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="additional_interviewers">Additional Interviewers</label>
+                                <select id="additional_interviewers" name="additional_interviewers" class="form-control" multiple>
+                                    {% for interviewer in interviewers|default([]) %}
+                                    <option value="{{ interviewer.id }}">{{ interviewer.name }} - {{ interviewer.title }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple interviewers</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>Interview Focus Areas</h4>
+                            <div class="form-group">
+                                <label>Focus Areas</label>
+                                <div class="focus-areas">
+                                    <div class="form-check">
+                                        <input type="checkbox" id="technical_skills" name="focus_areas" value="technical_skills" class="form-check-input">
+                                        <label for="technical_skills" class="form-check-label">Technical Skills</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" id="communication" name="focus_areas" value="communication" class="form-check-input">
+                                        <label for="communication" class="form-check-label">Communication Skills</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" id="problem_solving" name="focus_areas" value="problem_solving" class="form-check-input">
+                                        <label for="problem_solving" class="form-check-label">Problem Solving</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" id="cultural_fit" name="focus_areas" value="cultural_fit" class="form-check-input">
+                                        <label for="cultural_fit" class="form-check-label">Cultural Fit</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" id="leadership" name="focus_areas" value="leadership" class="form-check-input">
+                                        <label for="leadership" class="form-check-label">Leadership</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" id="experience" name="focus_areas" value="experience" class="form-check-input">
+                                        <label for="experience" class="form-check-label">Relevant Experience</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="interview_notes">Interview Preparation Notes</label>
+                                <textarea id="interview_notes" name="interview_notes" class="form-control" rows="4"
+                                          placeholder="Notes for the interviewer about the candidate, specific questions to ask, etc."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h4>Notifications</h4>
+                            <div class="form-check">
+                                <input type="checkbox" id="send_candidate_email" name="send_candidate_email" class="form-check-input" checked>
+                                <label for="send_candidate_email" class="form-check-label">Send interview invitation to candidate</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="send_interviewer_email" name="send_interviewer_email" class="form-check-input" checked>
+                                <label for="send_interviewer_email" class="form-check-label">Send notification to interviewers</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="calendar_invite" name="calendar_invite" class="form-check-input" checked>
+                                <label for="calendar_invite" class="form-check-label">Send calendar invitation</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Schedule Interview</button>
+                            <a href="{{ url_for('hr.applications') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Candidate Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="candidate-summary">
+                        <div class="candidate-avatar">
+                            {% if application.user.personal_data.profile_picture %}
+                                <img src="{{ application.user.personal_data.profile_picture }}" alt="Profile Picture">
+                            {% else %}
+                                <div class="avatar-placeholder">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="candidate-details">
+                            <h4>{{ application.user.personal_data.first_name }} {{ application.user.personal_data.last_name }}</h4>
+                            <p class="text-muted">{{ application.user.email }}</p>
+                            <p class="text-muted">{{ application.user.personal_data.phone|default('No phone provided') }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="application-info">
+                        <h5>Application Details</h5>
+                        <p><strong>Position:</strong> {{ application.job.title }}</p>
+                        <p><strong>Applied:</strong> {{ application.created_at|datetime }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge badge-primary">{{ application.status|title }}</span>
+                        </p>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <a href="{{ url_for('hr.application_detail', application_id=application.id) }}" class="btn btn-outline-primary btn-block">
+                            <i class="fas fa-eye"></i> View Full Application
+                        </a>
+                        {% if application.resume_path %}
+                        <a href="{{ url_for('hr.download_resume', application_id=application.id) }}" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-download"></i> Download Resume
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3>Interview History</h3>
+                </div>
+                <div class="card-body">
+                    {% if application.interviews %}
+                        <div class="interview-timeline">
+                            {% for interview in application.interviews %}
+                            <div class="timeline-item">
+                                <div class="timeline-icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6>{{ interview.type|title }} Interview</h6>
+                                    <p class="text-muted">{{ interview.scheduled_at|datetime }}</p>
+                                    <span class="badge badge-{{ interview.status_class }}">{{ interview.status|title }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No previous interviews scheduled</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .schedule-interview-container {
+        max-width: 1200px;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    
+    .form-section h4 {
+        margin-bottom: 1.5rem;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+    }
+    
+    .focus-areas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .required {
+        color: var(--danger-color);
+    }
+    
+    .candidate-summary {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .candidate-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    
+    .candidate-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        background-color: var(--gray-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--gray-color);
+    }
+    
+    .candidate-details h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
+    }
+    
+    .candidate-details p {
+        margin: 0.25rem 0;
+    }
+    
+    .application-info {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .application-info h5 {
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .application-info p {
+        margin: 0.5rem 0;
+    }
+    
+    .quick-actions .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .interview-timeline {
+        position: relative;
+    }
+    
+    .interview-timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: var(--border-color);
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 30px;
+        height: 30px;
+        background-color: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+    }
+    
+    .timeline-content h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+    }
+    
+    .timeline-content p {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 768px) {
+        .focus-areas {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .candidate-summary {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set minimum date to today
+        const dateInput = document.getElementById('interview_date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+        
+        // Update location placeholder based on interview type
+        const typeSelect = document.getElementById('interview_type');
+        const locationInput = document.getElementById('location');
+        
+        typeSelect.addEventListener('change', function() {
+            const type = this.value;
+            let placeholder = 'Location/Meeting Link';
+            
+            switch(type) {
+                case 'phone':
+                    placeholder = 'Phone number to call';
+                    break;
+                case 'video':
+                    placeholder = 'Video meeting link (Zoom, Teams, etc.)';
+                    break;
+                case 'in_person':
+                    placeholder = 'Office address or meeting room';
+                    break;
+                default:
+                    placeholder = 'Location/Meeting Link';
+            }
+            
+            locationInput.placeholder = placeholder;
+        });
+    });
+</script>
+{% endblock %}

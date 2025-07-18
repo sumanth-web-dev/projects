@@ -1,0 +1,697 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Resume Builder - Student Dashboard{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}" class="active"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.internships') }}"><i class="fas fa-graduation-cap"></i> Internships</a></li>
+<li><a href="{{ url_for('student.placements') }}"><i class="fas fa-building"></i> Placements</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+<li><a href="{{ url_for('student.skills_assessment') }}"><i class="fas fa-tasks"></i> Skills Assessment</a></li>
+<li><a href="{{ url_for('student.courses') }}"><i class="fas fa-book"></i> Courses</a></li>
+<li><a href="{{ url_for('student.events') }}"><i class="fas fa-calendar-alt"></i> Events</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Resume Builder{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" onclick="downloadResume()"><i class="fas fa-download"></i> Download PDF</button>
+<button class="btn btn-secondary" onclick="previewResume()"><i class="fas fa-eye"></i> Preview</button>
+<button class="btn btn-success" onclick="uploadResume()"><i class="fas fa-upload"></i> Upload Resume</button>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="resume-builder-container">
+    <div class="resume-controls">
+        <div class="card">
+            <div class="card-header">
+                <h3>Resume Templates</h3>
+            </div>
+            <div class="card-body">
+                <div class="template-selector">
+                    <div class="template-option" data-template="modern" onclick="selectTemplate('modern')">
+                        <div class="template-preview">
+                            <div class="template-thumbnail modern-template"></div>
+                        </div>
+                        <div class="template-name">Modern</div>
+                    </div>
+                    <div class="template-option" data-template="classic" onclick="selectTemplate('classic')">
+                        <div class="template-preview">
+                            <div class="template-thumbnail classic-template"></div>
+                        </div>
+                        <div class="template-name">Classic</div>
+                    </div>
+                    <div class="template-option" data-template="creative" onclick="selectTemplate('creative')">
+                        <div class="template-preview">
+                            <div class="template-thumbnail creative-template"></div>
+                        </div>
+                        <div class="template-name">Creative</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Resume Sections</h3>
+            </div>
+            <div class="card-body">
+                <div class="section-toggles">
+                    <div class="form-check">
+                        <input type="checkbox" id="include_summary" class="form-check-input" checked onchange="toggleSection('summary')">
+                        <label for="include_summary" class="form-check-label">Professional Summary</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="include_experience" class="form-check-input" checked onchange="toggleSection('experience')">
+                        <label for="include_experience" class="form-check-label">Work Experience</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="include_education" class="form-check-input" checked onchange="toggleSection('education')">
+                        <label for="include_education" class="form-check-label">Education</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="include_skills" class="form-check-input" checked onchange="toggleSection('skills')">
+                        <label for="include_skills" class="form-check-label">Skills</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="include_projects" class="form-check-input" checked onchange="toggleSection('projects')">
+                        <label for="include_projects" class="form-check-label">Projects</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="include_certifications" class="form-check-input" onchange="toggleSection('certifications')">
+                        <label for="include_certifications" class="form-check-label">Certifications</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Resume Actions</h3>
+            </div>
+            <div class="card-body">
+                <div class="resume-actions">
+                    <button class="btn btn-outline-primary btn-block" onclick="saveResume()">
+                        <i class="fas fa-save"></i> Save Resume
+                    </button>
+                    <button class="btn btn-outline-secondary btn-block" onclick="loadFromProfile()">
+                        <i class="fas fa-user"></i> Load from Profile
+                    </button>
+                    <button class="btn btn-outline-info btn-block" onclick="analyzeResume()">
+                        <i class="fas fa-chart-line"></i> Analyze Resume
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="resume-preview">
+        <div class="resume-document" id="resumeDocument">
+            <div class="resume-header">
+                <div class="personal-info">
+                    <h1 class="name">{{ user.personal_data.first_name|default('Your Name') }} {{ user.personal_data.last_name|default('') }}</h1>
+                    <div class="contact-info">
+                        <span class="email">{{ user.email|default('your.email@example.com') }}</span>
+                        <span class="phone">{{ user.personal_data.phone|default('(555) 123-4567') }}</span>
+                        <span class="location">{{ user.personal_data.location|default('City, State') }}</span>
+                    </div>
+                    {% if user.personal_data.social_links %}
+                    <div class="social-links">
+                        {% if user.personal_data.social_links.linkedin %}
+                        <span class="linkedin">{{ user.personal_data.social_links.linkedin }}</span>
+                        {% endif %}
+                        {% if user.personal_data.social_links.github %}
+                        <span class="github">{{ user.personal_data.social_links.github }}</span>
+                        {% endif %}
+                        {% if user.personal_data.social_links.portfolio %}
+                        <span class="portfolio">{{ user.personal_data.social_links.portfolio }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="resume-section summary-section" id="summarySection">
+                <h2 class="section-title">Professional Summary</h2>
+                <div class="section-content">
+                    <p>{{ user.personal_data.bio|default('A motivated and detail-oriented professional seeking opportunities to contribute skills and grow in a dynamic environment.') }}</p>
+                </div>
+            </div>
+            
+            <div class="resume-section experience-section" id="experienceSection">
+                <h2 class="section-title">Work Experience</h2>
+                <div class="section-content">
+                    {% if user.personal_data.experience %}
+                        {% for exp in user.personal_data.experience %}
+                        <div class="experience-item">
+                            <div class="experience-header">
+                                <h3 class="job-title">{{ exp.title }}</h3>
+                                <span class="company">{{ exp.company }}</span>
+                                <span class="duration">{{ exp.start_date }} - {{ exp.end_date if exp.end_date else 'Present' }}</span>
+                            </div>
+                            <div class="experience-description">
+                                <p>{{ exp.description }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="placeholder-text">Add your work experience in your profile to see it here.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="resume-section education-section" id="educationSection">
+                <h2 class="section-title">Education</h2>
+                <div class="section-content">
+                    {% if user.personal_data.education %}
+                        {% for edu in user.personal_data.education %}
+                        <div class="education-item">
+                            <div class="education-header">
+                                <h3 class="degree">{{ edu.degree }} in {{ edu.field }}</h3>
+                                <span class="institution">{{ edu.institution }}</span>
+                                <span class="year">{{ edu.year }}</span>
+                            </div>
+                            {% if edu.gpa %}
+                            <div class="education-details">
+                                <span class="gpa">GPA: {{ edu.gpa }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="placeholder-text">Add your education details in your profile to see them here.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="resume-section skills-section" id="skillsSection">
+                <h2 class="section-title">Technical Skills</h2>
+                <div class="section-content">
+                    {% if user.personal_data.skills %}
+                        <div class="skills-list">
+                            {% for skill in user.personal_data.skills %}
+                            <span class="skill-tag">{{ skill }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="placeholder-text">Add your skills in your profile to see them here.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="resume-section projects-section" id="projectsSection">
+                <h2 class="section-title">Projects</h2>
+                <div class="section-content">
+                    {% if user.personal_data.projects %}
+                        {% for project in user.personal_data.projects %}
+                        <div class="project-item">
+                            <div class="project-header">
+                                <h3 class="project-name">{{ project.name }}</h3>
+                                {% if project.url %}
+                                <span class="project-url">{{ project.url }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="project-description">
+                                <p>{{ project.description }}</p>
+                            </div>
+                            {% if project.technologies %}
+                            <div class="project-technologies">
+                                <strong>Technologies:</strong> {{ project.technologies|join(', ') }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="placeholder-text">Add your projects in your profile to see them here.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="resume-section certifications-section" id="certificationsSection" style="display: none;">
+                <h2 class="section-title">Certifications</h2>
+                <div class="section-content">
+                    {% if user.personal_data.certifications %}
+                        {% for cert in user.personal_data.certifications %}
+                        <div class="certification-item">
+                            <h3 class="certification-name">{{ cert.name }}</h3>
+                            <span class="certification-issuer">{{ cert.issuer }}</span>
+                            <span class="certification-date">{{ cert.date }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="placeholder-text">Add certifications to your profile to see them here.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Resume Modal -->
+<div class="modal fade" id="uploadResumeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Resume</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadResumeForm" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+                    <div class="form-group">
+                        <label for="resume_file">Choose Resume File</label>
+                        <input type="file" id="resume_file" name="resume_file" class="form-control-file" accept=".pdf,.doc,.docx" required>
+                        <small class="form-text text-muted">Supported formats: PDF, DOC, DOCX (Max size: 5MB)</small>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="replace_current" name="replace_current" class="form-check-input">
+                            <label for="replace_current" class="form-check-label">Replace current resume</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitUpload()">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .resume-builder-container {
+        display: flex;
+        gap: 2rem;
+        max-width: 1400px;
+    }
+    
+    .resume-controls {
+        width: 300px;
+        flex-shrink: 0;
+    }
+    
+    .resume-preview {
+        flex: 1;
+        background: #f5f5f5;
+        padding: 2rem;
+        border-radius: 8px;
+    }
+    
+    .template-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .template-option {
+        text-align: center;
+        cursor: pointer;
+        padding: 1rem;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .template-option:hover {
+        border-color: var(--primary-color);
+    }
+    
+    .template-option.active {
+        border-color: var(--primary-color);
+        background-color: var(--primary-light);
+    }
+    
+    .template-thumbnail {
+        width: 60px;
+        height: 80px;
+        margin: 0 auto 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+    
+    .modern-template {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .classic-template {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .creative-template {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .template-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .section-toggles .form-check {
+        margin-bottom: 0.75rem;
+    }
+    
+    .resume-actions .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .resume-document {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        font-family: 'Arial', sans-serif;
+        line-height: 1.6;
+        max-width: 8.5in;
+        margin: 0 auto;
+    }
+    
+    .resume-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--primary-color);
+    }
+    
+    .name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .contact-info span {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .social-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .social-links span {
+        font-size: 0.85rem;
+        color: var(--primary-color);
+    }
+    
+    .resume-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .experience-item, .education-item, .project-item, .certification-item {
+        margin-bottom: 1rem;
+    }
+    
+    .experience-header, .education-header, .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+    
+    .job-title, .degree, .project-name, .certification-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+    
+    .company, .institution, .project-url, .certification-issuer {
+        font-weight: 500;
+        color: #666;
+    }
+    
+    .duration, .year, .certification-date {
+        font-size: 0.9rem;
+        color: #888;
+    }
+    
+    .experience-description, .project-description {
+        margin-top: 0.5rem;
+        color: #555;
+    }
+    
+    .skills-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .skill-tag {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .project-technologies {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .placeholder-text {
+        color: #999;
+        font-style: italic;
+        text-align: center;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    @media (max-width: 992px) {
+        .resume-builder-container {
+            flex-direction: column;
+        }
+        
+        .resume-controls {
+            width: 100%;
+        }
+        
+        .template-selector {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .contact-info {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .experience-header, .education-header, .project-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    
+    @media print {
+        .resume-builder-container {
+            display: block;
+        }
+        
+        .resume-controls {
+            display: none;
+        }
+        
+        .resume-preview {
+            background: white;
+            padding: 0;
+        }
+        
+        .resume-document {
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+</style>
+
+<script>
+    let selectedTemplate = 'modern';
+    
+    function selectTemplate(template) {
+        selectedTemplate = template;
+        document.querySelectorAll('.template-option').forEach(option => {
+            option.classList.remove('active');
+        });
+        document.querySelector(`[data-template="${template}"]`).classList.add('active');
+        applyTemplate(template);
+    }
+    
+    function applyTemplate(template) {
+        const resumeDocument = document.getElementById('resumeDocument');
+        resumeDocument.className = `resume-document ${template}-template`;
+        
+        // Apply template-specific styles
+        switch(template) {
+            case 'modern':
+                resumeDocument.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+                break;
+            case 'classic':
+                resumeDocument.style.fontFamily = "'Times New Roman', Times, serif";
+                break;
+            case 'creative':
+                resumeDocument.style.fontFamily = "'Arial', sans-serif";
+                break;
+        }
+    }
+    
+    function toggleSection(sectionName) {
+        const checkbox = document.getElementById(`include_${sectionName}`);
+        const section = document.getElementById(`${sectionName}Section`);
+        
+        if (checkbox.checked) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+    }
+    
+    function downloadResume() {
+        // Generate PDF of the resume
+        window.print();
+    }
+    
+    function previewResume() {
+        const resumeContent = document.getElementById('resumeDocument').outerHTML;
+        const previewWindow = window.open('', '_blank');
+        previewWindow.document.write(`
+            <html>
+                <head>
+                    <title>Resume Preview</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        ${document.querySelector('style').innerHTML}
+                    </style>
+                </head>
+                <body>
+                    ${resumeContent}
+                </body>
+            </html>
+        `);
+        previewWindow.document.close();
+    }
+    
+    function uploadResume() {
+        $('#uploadResumeModal').modal('show');
+    }
+    
+    function submitUpload() {
+        const form = document.getElementById('uploadResumeForm');
+        const formData = new FormData(form);
+        
+        fetch('/student/resume/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Resume uploaded successfully!');
+                $('#uploadResumeModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error uploading resume: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error uploading resume');
+        });
+    }
+    
+    function saveResume() {
+        const resumeData = {
+            template: selectedTemplate,
+            sections: {
+                summary: document.getElementById('include_summary').checked,
+                experience: document.getElementById('include_experience').checked,
+                education: document.getElementById('include_education').checked,
+                skills: document.getElementById('include_skills').checked,
+                projects: document.getElementById('include_projects').checked,
+                certifications: document.getElementById('include_certifications').checked
+            }
+        };
+        
+        fetch('/student/resume/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify(resumeData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Resume saved successfully!');
+            } else {
+                alert('Error saving resume');
+            }
+        })
+        .catch(error => {
+            alert('Error saving resume');
+        });
+    }
+    
+    function loadFromProfile() {
+        if (confirm('This will update your resume with the latest information from your profile. Continue?')) {
+            location.reload();
+        }
+    }
+    
+    function analyzeResume() {
+        fetch('/student/resume/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify({
+                resume_content: document.getElementById('resumeDocument').innerText
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Resume Analysis:\nScore: ${data.score}/100\nSuggestions: ${data.suggestions.join(', ')}`);
+            } else {
+                alert('Error analyzing resume');
+            }
+        })
+        .catch(error => {
+            alert('Error analyzing resume');
+        });
+    }
+    
+    // Initialize with modern template
+    document.addEventListener('DOMContentLoaded', function() {
+        selectTemplate('modern');
+    });
+</script>
+{% endblock %}
