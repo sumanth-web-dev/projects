@@ -1,0 +1,440 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Events - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.internships') }}"><i class="fas fa-graduation-cap"></i> Internships</a></li>
+<li><a href="{{ url_for('student.placements') }}"><i class="fas fa-building"></i> Placements</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('campus_drive.my_registrations') }}"><i class="fas fa-clipboard-check"></i> My Registrations</a></li>
+<li><a href="{{ url_for('student.skills_assessment') }}"><i class="fas fa-tasks"></i> Skills Assessment</a></li>
+<li><a href="{{ url_for('student.courses') }}"><i class="fas fa-book"></i> Courses</a></li>
+<li><a href="{{ url_for('student.events') }}" class="active"><i class="fas fa-calendar-alt"></i> Events</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Upcoming Events{% endblock %}
+
+{% block page_actions %}
+<div class="quick-actions">
+    <a href="{{ url_for('campus_drive.list_drives') }}" class="btn btn-primary"><i class="fas fa-university"></i> Campus Drives</a>
+    <a href="{{ url_for('campus_drive.my_registrations') }}" class="btn btn-outline-primary"><i class="fas fa-clipboard-check"></i> My Registrations</a>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="events-container">
+    <!-- Calendar View -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3><i class="fas fa-calendar"></i> Events Calendar</h3>
+                        <div class="calendar-navigation">
+                            <button class="btn btn-outline-secondary btn-sm"><i class="fas fa-chevron-left"></i></button>
+                            <span class="current-month">July 2025</span>
+                            <button class="btn btn-outline-secondary btn-sm"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <div>Sun</div>
+                            <div>Mon</div>
+                            <div>Tue</div>
+                            <div>Wed</div>
+                            <div>Thu</div>
+                            <div>Fri</div>
+                            <div>Sat</div>
+                        </div>
+                        <div class="calendar-grid">
+                            <!-- Previous month days -->
+                            <div class="calendar-day other-month">29</div>
+                            <div class="calendar-day other-month">30</div>
+                            <!-- Current month days -->
+                            <div class="calendar-day">1</div>
+                            <div class="calendar-day">2</div>
+                            <div class="calendar-day">3</div>
+                            <div class="calendar-day">4</div>
+                            <div class="calendar-day">5</div>
+                            <div class="calendar-day">6</div>
+                            <div class="calendar-day">7</div>
+                            <div class="calendar-day">8</div>
+                            <div class="calendar-day">9</div>
+                            <div class="calendar-day">10</div>
+                            <div class="calendar-day">11</div>
+                            <div class="calendar-day">12</div>
+                            <div class="calendar-day">13</div>
+                            <div class="calendar-day">14</div>
+                            <div class="calendar-day">15</div>
+                            <div class="calendar-day">16</div>
+                            <div class="calendar-day">17</div>
+                            <div class="calendar-day">18</div>
+                            <div class="calendar-day">19</div>
+                            <div class="calendar-day has-event">20
+                                <div class="event-indicator workshop">Workshop</div>
+                            </div>
+                            <div class="calendar-day">21</div>
+                            <div class="calendar-day has-event">22
+                                <div class="event-indicator webinar">Webinar</div>
+                            </div>
+                            <div class="calendar-day">23</div>
+                            <div class="calendar-day">24</div>
+                            <div class="calendar-day has-event">25
+                                <div class="event-indicator career-fair">Career Fair</div>
+                            </div>
+                            <div class="calendar-day">26</div>
+                            <div class="calendar-day">27</div>
+                            <div class="calendar-day">28</div>
+                            <div class="calendar-day">29</div>
+                            <div class="calendar-day">30</div>
+                            <div class="calendar-day">31</div>
+                            <!-- Next month days -->
+                            <div class="calendar-day other-month">1</div>
+                            <div class="calendar-day other-month">2</div>
+                        </div>
+                    </div>
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <span class="legend-color workshop"></span>
+                            <span>Workshop</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color webinar"></span>
+                            <span>Webinar</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color career-fair"></span>
+                            <span>Career Fair</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color other"></span>
+                            <span>Other</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Events List -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
+                        <div class="event-filters">
+                            <select class="form-control form-control-sm">
+                                <option>All Types</option>
+                                <option>Workshops</option>
+                                <option>Webinars</option>
+                                <option>Career Fairs</option>
+                                <option>Networking</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_events %}
+                        <div class="events-list">
+                            {% for event in upcoming_events %}
+                            <div class="event-card">
+                                <div class="event-date">
+                                    <div class="date-day">{{ event.date.strftime('%d') }}</div>
+                                    <div class="date-month">{{ event.date.strftime('%b') }}</div>
+                                </div>
+                                <div class="event-details">
+                                    <h4 class="event-title">{{ event.title }}</h4>
+                                    <div class="event-meta">
+                                        <span class="event-type {{ event.type|lower }}">{{ event.type|title }}</span>
+                                        <span class="event-time"><i class="fas fa-clock"></i> {{ event.time }}</span>
+                                        <span class="event-location"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</span>
+                                    </div>
+                                    <div class="event-description">
+                                        <p>{{ event.description|truncate(150) }}</p>
+                                    </div>
+                                    <div class="event-organizer">
+                                        <span><i class="fas fa-user-tie"></i> Organized by: {{ event.organizer }}</span>
+                                    </div>
+                                </div>
+                                <div class="event-actions">
+                                    <a href="{{ url_for('student.register_event', event_id=event.id) }}" class="btn btn-primary">Register</a>
+                                    <a href="{{ url_for('student.view_event', event_id=event.id) }}" class="btn btn-outline-secondary">Details</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-alt fa-4x text-muted"></i>
+                            <h4>No Upcoming Events</h4>
+                            <p>Check back later for upcoming events and workshops.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .calendar-container {
+        margin-bottom: 20px;
+    }
+    
+    .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-gap: 5px;
+    }
+    
+    .calendar-day {
+        height: 80px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 5px;
+        position: relative;
+        background-color: #fff;
+    }
+    
+    .calendar-day.other-month {
+        background-color: #f8f9fa;
+        color: #aaa;
+    }
+    
+    .calendar-day.has-event {
+        font-weight: 600;
+    }
+    
+    .event-indicator {
+        position: absolute;
+        bottom: 5px;
+        left: 5px;
+        right: 5px;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        text-align: center;
+        color: white;
+    }
+    
+    .event-indicator.workshop {
+        background-color: #28a745;
+    }
+    
+    .event-indicator.webinar {
+        background-color: #007bff;
+    }
+    
+    .event-indicator.career-fair {
+        background-color: #dc3545;
+    }
+    
+    .event-indicator.other {
+        background-color: #6c757d;
+    }
+    
+    .calendar-navigation {
+        display: flex;
+        align-items: center;
+    }
+    
+    .current-month {
+        margin: 0 15px;
+        font-weight: 600;
+    }
+    
+    .calendar-legend {
+        display: flex;
+        justify-content: center;
+        margin-top: 15px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-right: 20px;
+    }
+    
+    .legend-color {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        border-radius: 3px;
+        margin-right: 5px;
+    }
+    
+    .legend-color.workshop {
+        background-color: #28a745;
+    }
+    
+    .legend-color.webinar {
+        background-color: #007bff;
+    }
+    
+    .legend-color.career-fair {
+        background-color: #dc3545;
+    }
+    
+    .legend-color.other {
+        background-color: #6c757d;
+    }
+    
+    .events-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .event-card {
+        display: flex;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .event-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .event-date {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        padding: 15px;
+        min-width: 80px;
+    }
+    
+    .date-day {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .date-month {
+        font-size: 1rem;
+        text-transform: uppercase;
+    }
+    
+    .event-details {
+        flex-grow: 1;
+        padding: 15px;
+    }
+    
+    .event-title {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+    }
+    
+    .event-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .event-type {
+        padding: 3px 8px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        color: white;
+    }
+    
+    .event-type.workshop {
+        background-color: #28a745;
+    }
+    
+    .event-type.webinar {
+        background-color: #007bff;
+    }
+    
+    .event-type.career-fair {
+        background-color: #dc3545;
+    }
+    
+    .event-type.networking {
+        background-color: #6c757d;
+    }
+    
+    .event-time, .event-location {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .event-time i, .event-location i {
+        margin-right: 5px;
+    }
+    
+    .event-description {
+        margin-bottom: 10px;
+    }
+    
+    .event-organizer {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .event-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 15px;
+        gap: 10px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .empty-state i {
+        margin-bottom: 20px;
+        color: #ccc;
+    }
+    
+    .empty-state h4 {
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    
+    @media (max-width: 768px) {
+        .event-card {
+            flex-direction: column;
+        }
+        
+        .event-date {
+            flex-direction: row;
+            padding: 10px;
+        }
+        
+        .date-day {
+            margin-right: 5px;
+        }
+        
+        .event-actions {
+            flex-direction: row;
+        }
+    }
+</style>
+{% endblock %}

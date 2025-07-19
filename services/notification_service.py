@@ -5,7 +5,7 @@ This module provides functionality for sending notifications to users through
 various channels including in-app notifications and email.
 """
 
-from flask import session
+from flask import session, has_request_context
 import logging
 import json
 import uuid
@@ -347,12 +347,12 @@ class NotificationService:
             logger.error(f"Error getting unread notification count: {str(e)}")
             return 0
     
-    def send_email_notification(self, user_id: str, subject: str, 
+    def send_email_notification(self, user_id: Optional[str], subject: str, 
                               message: str, html_message: Optional[str] = None) -> bool:
         """Send an email notification to a user.
         
         Args:
-            user_id: ID of the user to email
+            user_id: ID of the user to email, or None for system notifications
             subject: Email subject
             message: Plain text email message
             html_message: Optional HTML version of the message
@@ -363,22 +363,32 @@ class NotificationService:
         if not self.email_notifications_enabled:
             logger.info("Email notifications are disabled, skipping email")
             return False
-        print("#"*20)
-        print(f"{self.smtp_server}, {self.smtp_port}, {self.smtp_username}, {self.smtp_password}, {self.sender_email}")
+            
         if not all([self.smtp_server, self.smtp_port, self.smtp_username, 
                    self.smtp_password, self.sender_email]):
             logger.error("Email configuration is incomplete, cannot send email")
             return False
         
         try:
-            # Get user email
-            # user = User.query.get(user_id)
-            # if not user or not user.email:
-            #     logger.error(f"User {user_id} not found or has no email")
-            #     return False
+            # Determine recipient email
+            if user_id is None:
+                # System notification - send to admin email
+                recipient_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+                logger.info(f"Sending system notification to admin: {recipient_email}")
+            elif user_id == 'admin':
+                # Handle admin notifications
+                recipient_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+            elif has_request_context() and session and session.get('registration_email'):
+                # For registration process
+                recipient_email = session['registration_email']
+            else:
+                # Get email from user record
+                user = User.query.get(user_id)
+                if not user or not user.email:
+                    logger.error(f"User {user_id} not found or has no email")
+                    return False
+                recipient_email = user.email
             
-            # recipient_email = user.email
-            recipient_email = session['registration_email'] 
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -486,13 +496,24 @@ class NotificationService:
         try:
             title = f"System Alert: {alert_type.capitalize()}"
             
-            notification_id = self.create_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                notification_type=f"system_{alert_type}",
-                related_entity_id=None
-            )
+            # Check if user exists before creating notification
+            if user_id == 'admin':
+                # Log the alert but don't create a notification for admin
+                logger.info(f"System alert for admin: {message}")
+            else:
+                # Verify user exists
+                user = User.query.get(user_id)
+                if not user:
+                    logger.error(f"User {user_id} not found, cannot create notification")
+                    return False
+                
+                notification_id = self.create_notification(
+                    user_id=user_id,
+                    title=title,
+                    message=message,
+                    notification_type=f"system_{alert_type}",
+                    related_entity_id=None
+                )
             
             # Send email for critical alerts
             if alert_type in ['error', 'security']:

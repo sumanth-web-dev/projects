@@ -1,0 +1,54 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{% block admin_title %}Admin Portal{% endblock %} - Job Application Agent{% endblock %}
+
+{% block sidebar_content %}
+<li><a href="{{ url_for('admin.dashboard') }}" {% if active_page == 'dashboard' %}class="active"{% endif %}>
+    <i class="fas fa-home"></i> <span>Dashboard</span>
+</a></li>
+<li><a href="{{ url_for('admin.users') }}" {% if active_page == 'users' %}class="active"{% endif %}>
+    <i class="fas fa-users"></i> <span>Users</span>
+</a></li>
+<li><a href="{{ url_for('admin.jobs') }}" {% if active_page == 'jobs' %}class="active"{% endif %}>
+    <i class="fas fa-briefcase"></i> <span>Jobs</span>
+</a></li>
+<li><a href="{{ url_for('admin.companies') }}" {% if active_page == 'companies' %}class="active"{% endif %}>
+    <i class="fas fa-building"></i> <span>Companies</span>
+</a></li>
+<li><a href="{{ url_for('admin.applications') }}" {% if active_page == 'applications' %}class="active"{% endif %}>
+    <i class="fas fa-clipboard-list"></i> <span>Applications</span>
+</a></li>
+<li><a href="{{ url_for('admin.campus_drives') }}" {% if active_page == 'campus_drives' %}class="active"{% endif %}>
+    <i class="fas fa-university"></i> <span>Campus Drives</span>
+</a></li>
+<li><a href="{{ url_for('admin.reports') }}" {% if active_page == 'reports' %}class="active"{% endif %}>
+    <i class="fas fa-chart-line"></i> <span>Reports</span>
+</a></li>
+<li class="sidebar-heading">System</li>
+<li><a href="{{ url_for('admin.settings') }}" {% if active_page == 'settings' %}class="active"{% endif %}>
+    <i class="fas fa-cog"></i> <span>Settings</span>
+</a></li>
+<li><a href="{{ url_for('admin.logs') }}" {% if active_page == 'logs' %}class="active"{% endif %}>
+    <i class="fas fa-history"></i> <span>Logs</span>
+</a></li>
+<li><a href="{{ url_for('admin.backup') }}" {% if active_page == 'backup' %}class="active"{% endif %}>
+    <i class="fas fa-database"></i> <span>Backup & Restore</span>
+</a></li>
+{% endblock %}
+
+{% block user_dropdown_items %}
+<a class="dropdown-item" href="{{ url_for('admin.profile') }}">
+    <i class="fas fa-user-shield"></i> Admin Profile
+</a>
+<a class="dropdown-item" href="{{ url_for('admin.settings') }}">
+    <i class="fas fa-cog"></i> System Settings
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="admin-content-wrapper">
+    {% block admin_content %}
+    <!-- Admin content will be inserted by child templates -->
+    {% endblock %}
+</div>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Job Offers - Job Application Agent{% endblock %}
+
+{% block page_title %}Job Offers{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <!-- Job Offers Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Job Offers</h1>
+    </div>
+
+    <!-- Offers Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Offers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ offers|length|default(0) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-trophy fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending Offers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_offers|length|default(0) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Accepted Offers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ accepted_offers|length|default(0) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Declined Offers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ declined_offers|length|default(0) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Offers List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Your Job Offers</h6>
+            <div class="dropdown no-arrow">
+                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
+                    <div class="dropdown-header">Filter By:</div>
+                    <a class="dropdown-item" href="#">All Offers</a>
+                    <a class="dropdown-item" href="#">Pending Offers</a>
+                    <a class="dropdown-item" href="#">Accepted Offers</a>
+                    <a class="dropdown-item" href="#">Declined Offers</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if offers %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="offersTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Position</th>
+                                <th>Salary</th>
+                                <th>Offer Date</th>
+                                <th>Deadline</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for offer in offers %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if offer.company_logo %}
+                                        <img src="{{ offer.company_logo }}" class="company-logo mr-2" alt="{{ offer.company }}">
+                                        {% endif %}
+                                        <span>{{ offer.company }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ offer.position }}</td>
+                                <td>{{ offer.salary }}</td>
+                                <td>{{ offer.offer_date|date }}</td>
+                                <td>
+                                    {% if offer.deadline %}
+                                        <span class="{% if offer.days_remaining < 3 %}text-danger{% elif offer.days_remaining < 7 %}text-warning{% else %}text-info{% endif %}">
+                                            {{ offer.deadline|date }} ({{ offer.days_remaining }} days)
+                                        </span>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if offer.status == 'pending' %}
+                                        <span class="badge badge-warning">Pending</span>
+                                    {% elif offer.status == 'accepted' %}
+                                        <span class="badge badge-success">Accepted</span>
+                                    {% elif offer.status == 'declined' %}
+                                        <span class="badge badge-danger">Declined</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ offer.status|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('student.view_offer', offer_id=offer.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if offer.status == 'pending' %}
+                                        <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#acceptOfferModal{{ offer.id }}">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#declineOfferModal{{ offer.id }}">
+                                            <i class="fas fa-times"></i> Decline
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <img src="{{ url_for('static', filename='images/empty-offers.svg') }}" alt="No offers" class="img-fluid mb-3" style="max-width: 200px;">
+                    <h4 class="text-gray-800">No Job Offers Yet</h4>
+                    <p class="text-gray-600 mb-4">Keep applying to jobs and showcasing your skills. Job offers will appear here when you receive them.</p>
+                    <a href="{{ url_for('job.list_jobs') }}" class="btn btn-primary">
+                        <i class="fas fa-search mr-2"></i> Browse Available Jobs
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Accept Offer Modals -->
+{% for offer in offers %}
+{% if offer.status == 'pending' %}
+<div class="modal fade" id="acceptOfferModal{{ offer.id }}" tabindex="-1" role="dialog" aria-labelledby="acceptOfferModalLabel{{ offer.id }}" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="acceptOfferModalLabel{{ offer.id }}">Accept Job Offer</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to accept the job offer from <strong>{{ offer.company }}</strong> for the position of <strong>{{ offer.position }}</strong>?</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i> Accepting this offer will notify the employer of your decision.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('student.accept_offer', offer_id=offer.id) }}" method="post">
+                    <button type="submit" class="btn btn-success">Accept Offer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Decline Offer Modals -->
+{% for offer in offers %}
+{% if offer.status == 'pending' %}
+<div class="modal fade" id="declineOfferModal{{ offer.id }}" tabindex="-1" role="dialog" aria-labelledby="declineOfferModalLabel{{ offer.id }}" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="declineOfferModalLabel{{ offer.id }}">Decline Job Offer</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to decline the job offer from <strong>{{ offer.company }}</strong> for the position of <strong>{{ offer.position }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> This action cannot be undone.
+                </div>
+                <form id="declineForm{{ offer.id }}">
+                    <div class="form-group">
+                        <label for="declineReason{{ offer.id }}">Reason for declining (optional):</label>
+                        <textarea class="form-control" id="declineReason{{ offer.id }}" name="reason" rows="3" placeholder="Please provide a reason for declining this offer..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('student.decline_offer', offer_id=offer.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Decline Offer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<style>
+.company-logo {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}

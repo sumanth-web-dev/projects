@@ -1,0 +1,29 @@
+{% extends "student/base.html" %}
+
+{% block student_title %}Test Page{% endblock %}
+
+{% block page_title %}Student Template Test{% endblock %}
+
+{% block student_content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Template Test</h5>
+    </div>
+    <div class="card-body">
+        <p>This is a test page to verify that the student/base.html template is working correctly.</p>
+        <p>If you can see this content, the template is working!</p>
+        
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle mr-2"></i> Student base template is functioning properly.
+        </div>
+        
+        <button class="btn btn-primary" onclick="testFunction()">Test JavaScript</button>
+    </div>
+</div>
+
+<script>
+function testFunction() {
+    alert('JavaScript is working in the student template!');
+}
+</script>
+{% endblock student_content %}

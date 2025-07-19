@@ -68,14 +68,14 @@ def login():
             
             # Direct role-based redirection with hash fragments
             if 'admin' in roles:
-                return redirect(url_for('admin.dashboard') + '#admin')
+                return redirect(url_for('admin.dashboard'))
             elif 'hr' in roles:
-                return redirect(url_for('hr.dashboard') + '#hr')    
+                return redirect(url_for('hr.dashboard'))    
             elif 'user' in roles:
-                return redirect(url_for('student.dashboard') + '#student')
+                return redirect(url_for('student.dashboard') )
             else:
                 # Default users go to a generic dashboard
-                return redirect(url_for('main.index') + '#user-dashboard')
+                return redirect(url_for('student.dashboard'))
                 
         except Exception as e:
             # If any error occurs during user processing, log it and show error

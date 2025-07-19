@@ -148,13 +148,14 @@ class AuthService:
             self.log_auth_attempt(False, 'login', email, {'reason': 'error', 'error': str(e)})
             return False, None, f"Authentication error: {str(e)}"
     
-    def create_user(self, email: str, password: str, personal_data: Dict = None) -> Tuple[bool, Optional[str], str]:
+    def create_user(self, email: str, password: str, personal_data: Dict = None, user_id: str = None) -> Tuple[bool, Optional[str], str]:
         """Create a new user account.
         
         Args:
             email: The user's email
             password: The user's password
             personal_data: Optional personal data for the user
+            user_id: Optional user ID (if not provided, a UUID will be generated)
             
         Returns:
             Tuple[bool, Optional[str], str]: (success, user_id, message)
@@ -167,8 +168,9 @@ class AuthService:
             if existing_user:
                 return False, None, "Email already registered"
             
-            # Create user ID
-            user_id = str(uuid.uuid4())
+            # Create user ID if not provided
+            if not user_id:
+                user_id = str(uuid.uuid4())
             
             # Initialize personal data
             user_personal_data = personal_data or {}

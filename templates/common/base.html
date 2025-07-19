@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}Job Application Agent{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block extra_css %}{% endblock %}
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+</head>
+
+<body class="{{ user_type }}-role">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Job Application Agent">
+                </div>
+                <h3>Job Application Agent</h3>
+                <button id="sidebar-toggle-btn" class="d-md-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    {% block sidebar_content %}
+                    <!-- Sidebar content will be inserted by role-specific templates -->
+                    {% endblock %}
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>&copy; {{ now.year|default(2025) }} Job Application Agent</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation -->
+            <header class="top-nav">
+                <div class="container-fluid">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <button id="mobile-sidebar-toggle" class="d-md-none mr-3">
+                                    <i class="fas fa-bars"></i>
+                                </button>
+                                <h2 class="page-title">{% block page_title %}Dashboard{% endblock %}</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            {% block page_actions %}{% endblock %}
+
+                            <!-- Notifications Dropdown -->
+                            <div class="notifications-dropdown dropdown mr-3">
+                                <a href="#" class="dropdown-toggle" id="notificationsDropdown" data-toggle="dropdown"
+                                    aria-haspopup="true" aria-expanded="false">
+                                    <div class="notifications-icon">
+                                        <i class="fas fa-bell"></i>
+                                        {% if notifications and notifications|selectattr('is_read', 'equalto',
+                                        false)|list|length > 0 %}
+                                        <span class="notification-badge">{{ notifications|selectattr('is_read',
+                                            'equalto', false)|list|length }}</span>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right notification-dropdown"
+                                    aria-labelledby="notificationsDropdown">
+                                    <h6 class="dropdown-header">Notifications</h6>
+                                    {% if notifications %}
+                                    {% for notification in notifications %}
+                                    <a class="dropdown-item notification-item {% if not notification.is_read %}unread{% endif %}"
+                                        href="#">
+                                        <div class="notification-icon">
+                                            {% if notification.type == 'application_update' %}
+                                            <i class="fas fa-clipboard-list text-primary"></i>
+                                            {% elif notification.type == 'interview_scheduled' %}
+                                            <i class="fas fa-calendar-check text-warning"></i>
+                                            {% elif notification.type == 'offer_received' %}
+                                            <i class="fas fa-trophy text-success"></i>
+                                            {% else %}
+                                            <i class="fas fa-bell text-info"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-text">{{ notification.message }}</div>
+                                            <div class="notification-time">{{ notification.timestamp|date }}</div>
+                                        </div>
+                                    </a>
+                                    {% endfor %}
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item text-center" href="#">View All Notifications</a>
+                                    {% else %}
+                                    <div class="dropdown-item text-center">No notifications</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- User Dropdown -->
+                            <div class="user-dropdown dropdown">
+                                <a href="#" class="dropdown-toggle" id="userDropdown" data-toggle="dropdown"
+                                    aria-haspopup="true" aria-expanded="false">
+                                    <div class="user-avatar">
+                                        <img src="{{ user.personal_data.avatar|default(url_for('static', filename='images/default-avatar.png')) }}"
+                                            alt="User Avatar">
+                                    </div>
+                                    <span class="user-name">{{ user.personal_data.first_name|default('User') }} {{
+                                        user.personal_data.last_name|default('') }}</span>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                                    {% block user_dropdown_items %}
+                                    <!-- User dropdown items will be inserted by role-specific templates -->
+                                    {% endblock %}
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <div class="container-fluid">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    {% block content %}
+                    <!-- Main content will be inserted by role-specific templates -->
+                    {% endblock %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/role-handler.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+
+    <script>
+        // Initialize tooltips
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+
+            // Mobile sidebar toggle
+            $('#mobile-sidebar-toggle, #sidebar-toggle-btn').on('click', function () {
+                $('.sidebar').toggleClass('show');
+                $('.main-content').toggleClass('sidebar-open');
+            });
+        });
+    </script>
+</body>
+
+</html>

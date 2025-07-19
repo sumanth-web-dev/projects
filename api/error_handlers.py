@@ -272,16 +272,55 @@ def handle_generic_exception(error: Exception) -> Tuple[Dict[str, Any], int]:
     logger.error(f"Unhandled Exception: {str(error)}")
     logger.error(f"Exception Details: {traceback.format_exc()}")
     
-    # Notify admin about unhandled exceptions
-    try:
-        if current_app.config.get('ADMIN_USER_ID'):
-            notification_service.notify_system_alert(
-                user_id=current_app.config['ADMIN_USER_ID'],
-                alert_type='error',
-                message=f"Unhandled server exception: {str(error)}"
-            )
-    except Exception as e:
-        logger.error(f"Failed to send admin notification: {str(e)}")
+    # For template errors, provide a more user-friendly response
+    if 'jinja2.exceptions.TemplateSyntaxError' in traceback.format_exc():
+        response['error']['message'] = "A template rendering error occurred. Please contact support."
+        
+        # Log the template error but don't try to create notifications
+        logger.error(f"Template syntax error: {str(error)}")
+        
+        # Render a simple error template instead of the broken one
+        from flask import render_template_string
+        error_html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Template Error</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                .error-container { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+                h1 { color: #d9534f; }
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h1>Template Error</h1>
+                <p>We're sorry, but there was an error rendering this page.</p>
+                <p>Our technical team has been notified and is working to fix the issue.</p>
+                <p><a href="/">Return to Home Page</a></p>
+            </div>
+        </body>
+        </html>
+        """
+        return render_template_string(error_html), 500
+    
+    # Only notify admin about non-template exceptions
+    elif not 'jinja2.exceptions' in traceback.format_exc():
+        try:
+            # Log to file instead of creating notifications
+            logger.error(f"System error: {str(error)}")
+            
+            # Only try to send email notification if configured
+            if current_app.config.get('ADMIN_EMAIL'):
+                from services.notification_service import notification_service
+                notification_service.send_email_notification(
+                    user_id=None,
+                    subject="System Alert: Error",
+                    message=f"Unhandled server exception: {str(error)}",
+                    html_message=f"<h2>System Error</h2><p>{str(error)}</p><pre>{traceback.format_exc()[:500]}...</pre>"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send admin notification: {str(e)}")
     
     return response, 500
 

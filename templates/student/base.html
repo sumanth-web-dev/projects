@@ -1,0 +1,53 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{% block student_title %}Student Portal{% endblock %} - Job Application Agent{% endblock %}
+
+{% block sidebar_content %}
+<li><a href="{{ url_for('student.dashboard') }}" {% if active_page=='dashboard' %}class="active" {% endif %}>
+        <i class="fas fa-home"></i> <span>Dashboard</span>
+    </a></li>
+<li><a href="{{ url_for('student.profile') }}" {% if active_page=='profile' %}class="active" {% endif %}>
+        <i class="fas fa-user"></i> <span>Profile</span>
+    </a></li>
+<li><a href="{{ url_for('student.resume') }}" {% if active_page=='resume' %}class="active" {% endif %}>
+        <i class="fas fa-file-alt"></i> <span>Resume</span>
+    </a></li>
+<li><a href="{{ url_for('student.applications') }}" {% if active_page=='applications' %}class="active" {% endif %}>
+        <i class="fas fa-clipboard-list"></i> <span>Applications</span>
+    </a></li>
+<li><a href="{{ url_for('job.list_jobs') }}" {% if active_page=='list_jobs' %}class="active" {% endif %}>
+        <i class="fas fa-briefcase"></i> <span>Browse Jobs</span>
+    </a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}" {% if active_page=='recommended_jobs' %}class="active" {% endif %}>
+        <i class="fas fa-star"></i> <span>Recommended Jobs</span>
+    </a></li>
+<li><a href="{{ url_for('student.interviews') }}" {% if active_page=='interviews' %}class="active" {% endif %}>
+        <i class="fas fa-calendar-check"></i> <span>Interviews</span>
+    </a></li>
+<li><a href="{{ url_for('student.offers') }}" {% if active_page=='offers' %}class="active" {% endif %}>
+        <i class="fas fa-trophy"></i> <span>Job Offers</span>
+    </a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}" {% if active_page=='list_drives' %}class="active" {% endif %}>
+        <i class="fas fa-university"></i> <span>Campus Drives</span>
+    </a></li>
+{% endblock %}
+
+{% block user_dropdown_items %}
+<a class="dropdown-item" href="{{ url_for('student.profile') }}">
+    <i class="fas fa-user"></i> My Profile
+</a>
+<a class="dropdown-item" href="{{ url_for('student.resume') }}">
+    <i class="fas fa-file-alt"></i> My Resume
+</a>
+<a class="dropdown-item" href="{{ url_for('student.settings') }}">
+    <i class="fas fa-cog"></i> Settings
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="student-content-wrapper">
+    {% block student_content %}
+    <!-- Student content will be inserted by child templates -->
+    {% endblock student_content %}
+</div>
+{% endblock dashboard_content %}

@@ -1,0 +1,576 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Interviews - Job Application Agent{% endblock %}
+
+{% block sidebar_items %}
+<li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+<li><a href="{{ url_for('student.profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+<li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
+<li><a href="{{ url_for('student.applications') }}"><i class="fas fa-clipboard-list"></i> Applications</a></li>
+<li><a href="{{ url_for('job.list_jobs') }}"><i class="fas fa-briefcase"></i> Browse Jobs</a></li>
+<li><a href="{{ url_for('job.recommended_jobs') }}"><i class="fas fa-star"></i> Recommended Jobs</a></li>
+<li><a href="{{ url_for('student.interviews') }}" class="active"><i class="fas fa-calendar-check"></i> Interviews</a></li>
+<li><a href="{{ url_for('student.offers') }}"><i class="fas fa-trophy"></i> Job Offers</a></li>
+<li><a href="{{ url_for('campus_drive.list_drives') }}"><i class="fas fa-university"></i> Campus Drives</a></li>
+<li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+{% endblock %}
+
+{% block page_title %}Interview Management{% endblock %}
+
+{% block page_actions %}
+<div class="quick-actions">
+    <a href="{{ url_for('student.applications') }}" class="btn btn-primary"><i class="fas fa-clipboard-list"></i> My Applications</a>
+    <a href="{{ url_for('student.resume') }}" class="btn btn-outline-primary"><i class="fas fa-file-alt"></i> Update Resume</a>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Interview Preparation Resources -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb text-warning"></i> Interview Preparation Resources</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="resource-card">
+                            <div class="resource-icon">
+                                <i class="fas fa-question-circle"></i>
+                            </div>
+                            <h5>Common Questions</h5>
+                            <p>Prepare for frequently asked interview questions in your field.</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary">View Resources</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="resource-card">
+                            <div class="resource-icon">
+                                <i class="fas fa-laptop-code"></i>
+                            </div>
+                            <h5>Technical Prep</h5>
+                            <p>Practice technical questions and coding challenges.</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary">Start Practice</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="resource-card">
+                            <div class="resource-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <h5>Behavioral Tips</h5>
+                            <p>Learn how to present yourself professionally during interviews.</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary">Read Tips</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="resource-card">
+                            <div class="resource-icon">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <h5>Mock Interviews</h5>
+                            <p>Schedule a practice interview with industry professionals.</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary">Schedule Now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Interviews -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-check text-primary"></i> Upcoming Interviews</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_interviews %}
+                    <div class="row">
+                        {% for interview in upcoming_interviews %}
+                        <div class="col-lg-6 mb-4">
+                            <div class="interview-card">
+                                <div class="interview-header">
+                                    <div class="interview-date">
+                                        <div class="date-day">{{ interview.scheduled_time.strftime('%d') }}</div>
+                                        <div class="date-month">{{ interview.scheduled_time.strftime('%b') }}</div>
+                                    </div>
+                                    <div class="interview-time">
+                                        <i class="fas fa-clock"></i> {{ interview.scheduled_time.strftime('%I:%M %p') }}
+                                    </div>
+                                    <div class="interview-type">
+                                        {% if interview.interview_type == 'phone' %}
+                                            <span class="badge badge-primary"><i class="fas fa-phone"></i> Phone</span>
+                                        {% elif interview.interview_type == 'video' %}
+                                            <span class="badge badge-info"><i class="fas fa-video"></i> Video</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary"><i class="fas fa-user"></i> In-person</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="interview-body">
+                                    <h5 class="company-name">{{ interview.application.job.company }}</h5>
+                                    <h6 class="position">{{ interview.application.job.title }}</h6>
+                                    
+                                    <div class="interview-details">
+                                        <div class="detail-item">
+                                            <div class="detail-icon">
+                                                <i class="fas fa-hourglass-half"></i>
+                                            </div>
+                                            <div class="detail-content">
+                                                <div class="detail-label">Duration</div>
+                                                <div class="detail-value">{{ interview.duration_minutes }} minutes</div>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if interview.location %}
+                                        <div class="detail-item">
+                                            <div class="detail-icon">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </div>
+                                            <div class="detail-content">
+                                                <div class="detail-label">Location</div>
+                                                <div class="detail-value">{{ interview.location }}</div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if interview.interviewer_name %}
+                                        <div class="detail-item">
+                                            <div class="detail-icon">
+                                                <i class="fas fa-user-tie"></i>
+                                            </div>
+                                            <div class="detail-content">
+                                                <div class="detail-label">Interviewer</div>
+                                                <div class="detail-value">{{ interview.interviewer_name }}
+                                                    {% if interview.interviewer_title %}
+                                                    <span class="interviewer-title">({{ interview.interviewer_title }})</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="interview-footer">
+                                    <button class="btn btn-primary" data-toggle="modal" data-target="#prepModal{{ interview.id }}">Prepare</button>
+                                    <button class="btn btn-outline-secondary" data-toggle="modal" data-target="#detailsModal{{ interview.id }}">Details</button>
+                                    <button class="btn btn-outline-danger" data-toggle="modal" data-target="#rescheduleModal{{ interview.id }}">Reschedule</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="text-center">
+                            <i class="fas fa-calendar-check fa-4x text-muted mb-3"></i>
+                            <h4>No Upcoming Interviews</h4>
+                            <p class="mb-4">You don't have any interviews scheduled at the moment.</p>
+                            <a href="{{ url_for('job.list_jobs') }}" class="btn btn-primary">Apply for Jobs</a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Past Interviews -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history text-info"></i> Past Interviews</h5>
+            </div>
+            <div class="card-body">
+                {% if past_interviews %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Company</th>
+                                    <th>Position</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Feedback</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for interview in past_interviews %}
+                                <tr>
+                                    <td>{{ interview.scheduled_time|date }}</td>
+                                    <td>{{ interview.application.job.company }}</td>
+                                    <td>{{ interview.application.job.title }}</td>
+                                    <td>
+                                        {% if interview.interview_type == 'phone' %}
+                                            <span class="badge badge-primary">Phone</span>
+                                        {% elif interview.interview_type == 'video' %}
+                                            <span class="badge badge-info">Video</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">In-person</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if interview.status == 'completed' %}
+                                            <span class="badge badge-success">Completed</span>
+                                        {% elif interview.status == 'cancelled' %}
+                                            <span class="badge badge-danger">Cancelled</span>
+                                        {% elif interview.status == 'rescheduled' %}
+                                            <span class="badge badge-warning">Rescheduled</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">{{ interview.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if interview.feedback %}
+                                            <button class="btn btn-sm btn-outline-info" data-toggle="modal" data-target="#feedbackModal{{ interview.id }}">View Feedback</button>
+                                        {% else %}
+                                            <span class="text-muted">No feedback</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#detailsModal{{ interview.id }}">Details</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state-small">
+                        <div class="text-center">
+                            <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                            <p>No past interviews to display.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interview Details Modal Template -->
+{% for interview in upcoming_interviews + past_interviews %}
+<div class="modal fade" id="detailsModal{{ interview.id }}" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel{{ interview.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel{{ interview.id }}">Interview Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="interview-detail-header">
+                    <h4>{{ interview.application.job.company }} - {{ interview.application.job.title }}</h4>
+                    <div class="interview-meta">
+                        <span class="badge badge-primary">{{ interview.interview_type|title }} Interview</span>
+                        <span class="badge badge-{{ 'success' if interview.status == 'completed' else 'secondary' }}">{{ interview.status|title }}</span>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Interview Details</h5>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Date & Time</th>
+                                <td>{{ interview.scheduled_time|date }} at {{ interview.scheduled_time.strftime('%I:%M %p') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Duration</th>
+                                <td>{{ interview.duration_minutes }} minutes</td>
+                            </tr>
+                            <tr>
+                                <th>Type</th>
+                                <td>{{ interview.interview_type|title }} Interview</td>
+                            </tr>
+                            {% if interview.location %}
+                            <tr>
+                                <th>Location</th>
+                                <td>{{ interview.location }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if interview.interviewer_name %}
+                            <tr>
+                                <th>Interviewer</th>
+                                <td>{{ interview.interviewer_name }}
+                                    {% if interview.interviewer_title %}
+                                    ({{ interview.interviewer_title }})
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Job Details</h5>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Company</th>
+                                <td>{{ interview.application.job.company }}</td>
+                            </tr>
+                            <tr>
+                                <th>Position</th>
+                                <td>{{ interview.application.job.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Location</th>
+                                <td>{{ interview.application.job.location }}</td>
+                            </tr>
+                            <tr>
+                                <th>Salary Range</th>
+                                <td>{{ interview.application.job.salary_range|default('Not specified') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if interview.notes %}
+                <div class="interview-notes mt-4">
+                    <h5>Notes</h5>
+                    <div class="card">
+                        <div class="card-body bg-light">
+                            {{ interview.notes }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if interview.feedback %}
+                <div class="interview-feedback mt-4">
+                    <h5>Feedback</h5>
+                    <div class="card">
+                        <div class="card-body bg-light">
+                            {{ interview.feedback }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                {% if interview.status != 'completed' and interview.status != 'cancelled' %}
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rescheduleModal{{ interview.id }}" data-dismiss="modal">Reschedule</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+/* Resource Cards */
+.resource-card {
+    background-color: #f8f9fc;
+    border-radius: 10px;
+    padding: 20px;
+    height: 100%;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.resource-icon {
+    font-size: 2.5rem;
+    color: #4e73df;
+    margin-bottom: 15px;
+}
+
+.resource-card h5 {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.resource-card p {
+    color: #858796;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+/* Interview Cards */
+.interview-card {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.interview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.interview-header {
+    background-color: #4e73df;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.interview-date {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 5px 10px;
+}
+
+.date-day {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.date-month {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.interview-time {
+    font-weight: 600;
+}
+
+.interview-body {
+    padding: 20px;
+    background-color: white;
+}
+
+.company-name {
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.position {
+    color: #858796;
+    margin-bottom: 15px;
+}
+
+.interview-details {
+    margin-top: 20px;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.detail-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #f8f9fc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: #4e73df;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    color: #858796;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-value {
+    font-weight: 600;
+}
+
+.interviewer-title {
+    font-weight: normal;
+    color: #858796;
+    font-size: 0.9rem;
+}
+
+.interview-footer {
+    padding: 15px 20px;
+    background-color: #f8f9fc;
+    border-top: 1px solid #e3e6f0;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Tables */
+.table thead th {
+    background-color: #f8f9fc;
+    border-top: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: #858796;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Modal Styles */
+.interview-detail-header {
+    margin-bottom: 20px;
+}
+
+.interview-detail-header h4 {
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.interview-meta {
+    margin-top: 10px;
+}
+
+/* Empty States */
+.empty-state {
+    padding: 3rem 1rem;
+}
+
+.empty-state-small {
+    padding: 2rem 1rem;
+}
+
+/* Card Headers */
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .interview-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .interview-date, .interview-time, .interview-type {
+        margin-bottom: 10px;
+    }
+    
+    .interview-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .interview-footer button {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
