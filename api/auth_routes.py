@@ -10,6 +10,8 @@ from services.otp_service import otp_service
 from services.notification_service import notification_service
 from api.security_middleware import validate_json_schema, sanitize_inputs, check_content_type
 from utils.input_sanitizer import validate_email
+from models.user import User
+
 
 # Create blueprint for auth routes
 auth_bp = Blueprint('auth', __name__)
@@ -35,7 +37,6 @@ def login():
             return render_template('login.html')
         
         # Get user details to determine role
-        from models.user import User
         user_id = user_data.get('id')
         
         try:
@@ -70,7 +71,7 @@ def login():
                 return redirect(url_for('admin.dashboard') + '#admin')
             elif 'hr' in roles:
                 return redirect(url_for('hr.dashboard') + '#hr')    
-            elif 'student' in roles:
+            elif 'user' in roles:
                 return redirect(url_for('student.dashboard') + '#student')
             else:
                 # Default users go to a generic dashboard
@@ -93,7 +94,9 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
-        
+        role = request.form.get('user_type')  # Default role is 'user'
+
+
         # Validate inputs
         if not email or not password or not confirm_password:
             flash('All fields are required', 'error')
@@ -110,10 +113,10 @@ def register():
         # Store registration data in session for later use
         session['registration_email'] = email
         session['registration_password'] = password
-        
+        session['registration_role'] = role
         # Generate OTP
         otp = otp_service.generate_otp(email)
-        
+        print(f"Generated OTP for {email}: {otp}, type: {type(otp)}")
         # Send OTP via email
         html_message = f"""
         <h2>Email Verification</h2>
@@ -146,7 +149,7 @@ def verify_otp():
     
     email = session['registration_email']
     password = session['registration_password']
-    
+    role = session.get('registration_role')  # Default to 'user' if not set
     if request.method == 'POST':
         # Get OTP from form
         otp = request.form.get('otp')
@@ -156,6 +159,8 @@ def verify_otp():
             return render_template('verify_otp.html', email=email)
         
         # Verify OTP
+        print("#" * 20)
+        print(f"Verifying OTP for {email}: {otp}, type: {type(otp)}")
         success, message = otp_service.verify_otp(email, otp)
         
         if not success:
@@ -163,13 +168,14 @@ def verify_otp():
             return render_template('verify_otp.html', email=email)
         
         # OTP verified, create user
-        success, user_id, message = auth_service.create_user(email, password)
+        success, user_id, message = auth_service.create_user(email, password, personal_data={'roles': [role] if role else ['user']})
         
         if success:
             # Clear registration data from session
             session.pop('registration_email', None)
             session.pop('registration_password', None)
-            
+            session.pop('registration_role', None)
+
             # Clear OTP record
             otp_service.clear_otp(email)
             

@@ -40,9 +40,8 @@ class MigrationManager:
     def init_app(self, app):
         """Initialize migration manager with Flask app."""
         self.app = app
-        # Use absolute path to migrations directory in project root
-        project_root = os.path.dirname(app.root_path)
-        self.migrations_dir = os.path.join(project_root, 'migrations')
+        # Use absolute path to migrations directory in the app root
+        self.migrations_dir = os.path.join(app.root_path, 'migrations')
         
         # Ensure migrations directory exists
         os.makedirs(self.migrations_dir, exist_ok=True)

@@ -15,6 +15,8 @@ from typing import Dict, List, Optional, Any, Union, Callable
 from flask import Flask
 from sqlalchemy import text
 from models.database import db
+import threading 
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -254,15 +256,25 @@ class MonitoringService:
         self._collection_thread.start()
         logger.info(f"Started metrics collection (interval: {self.metrics_interval}s)")
     
+   
+
     def stop_metrics_collection(self):
         """Stop collecting metrics."""
         if self._collection_thread is None or not self._collection_thread.is_alive():
             logger.warning("Metrics collection not running")
             return
-        
+
         self._stop_collection.set()
-        self._collection_thread.join(timeout=5.0)
+
+        # Avoid joining the current thread
+        if threading.current_thread() != self._collection_thread:
+            self._collection_thread.join(timeout=5.0)
+            logger.info("Stopped metrics collection")
+        else:
+            logger.warning("Called stop_metrics_collection from within the collection thread; skipping join()")
+
         self._collection_thread = None
+
         logger.info("Stopped metrics collection")
     
     def _cleanup(self, exception=None):
@@ -640,29 +652,30 @@ class MonitoringService:
         """Clean up old metrics data."""
         if self.app is None:
             return
-        
+
         try:
             with self.app.app_context():
-                # Calculate cutoff date
                 cutoff_date = datetime.utcnow() - timedelta(days=self.metrics_retention)
-                
-                # Delete old metrics
-                db.engine.execute(
-                    "DELETE FROM system_metrics WHERE timestamp < ?",
-                    cutoff_date
-                )
-                db.engine.execute(
-                    "DELETE FROM application_metrics WHERE timestamp < ?",
-                    cutoff_date
-                )
-                db.engine.execute(
-                    "DELETE FROM automation_metrics WHERE timestamp < ?",
-                    cutoff_date
-                )
-                
+
+                # Get a connection from the engine
+                with db.engine.connect() as connection:
+                    connection.execute(
+                        text("DELETE FROM system_metrics WHERE timestamp < :cutoff"),
+                        {"cutoff": cutoff_date}
+                    )
+                    connection.execute(
+                        text("DELETE FROM application_metrics WHERE timestamp < :cutoff"),
+                        {"cutoff": cutoff_date}
+                    )
+                    connection.execute(
+                        text("DELETE FROM automation_metrics WHERE timestamp < :cutoff"),
+                        {"cutoff": cutoff_date}
+                    )
+
                 logger.debug(f"Cleaned up metrics older than {cutoff_date}")
         except Exception as e:
             logger.error(f"Error cleaning up old metrics: {str(e)}")
+
     
     def get_system_metrics(self, hours: int = 24) -> List[Dict[str, Any]]:
         """Get system metrics for the specified time period.

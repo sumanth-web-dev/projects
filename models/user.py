@@ -24,7 +24,7 @@ class User(db.Model):
     email = Column(String(255), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+    role = Column(String(50), nullable=False, default='user')  # Default role is 'user'
     # Encrypted personal data (JSON string)
     encrypted_personal_data = Column(Text, nullable=True)
     
@@ -36,6 +36,9 @@ class User(db.Model):
     
     # Relationships
     applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
+
+    
+
     
     def __init__(self, id: str, email: str, **kwargs):
         """Initialize User instance."""
@@ -84,11 +87,8 @@ class User(db.Model):
         """Get decrypted personal data."""
         if not self.encrypted_personal_data:
             return {}
-        try:
-            return encryption_service.decrypt(self.encrypted_personal_data, self.id)
-        except ValueError:
-            # Log error and return empty dict if decryption fails
-            return {}
+        # The encryption_service now handles exceptions internally and returns empty dict on failure
+        return encryption_service.decrypt(self.encrypted_personal_data, self.id)
     
     @personal_data.setter
     def personal_data(self, data: Dict):

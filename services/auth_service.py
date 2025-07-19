@@ -110,8 +110,13 @@ class AuthService:
                 return False, None, "Account is inactive"
             
             # Get user credentials from encrypted personal data
-            personal_data = user.personal_data
-            stored_password = personal_data.get('password')
+            try:
+                personal_data = user.personal_data or {}
+                stored_password = personal_data.get('password')
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                self.log_auth_attempt(False, 'login', email, {'reason': 'personal_data_error', 'user_id': user.id})
+                return False, None, "Authentication error: Unable to retrieve user data"
             
             if not stored_password:
                 # If this is the first login and no password is set, set the provided password
@@ -230,7 +235,11 @@ class AuthService:
                 return False
             
             # Get user data
-            personal_data = user.personal_data or {}
+            try:
+                personal_data = user.personal_data or {}
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False
             
             # Hash and set password
             hashed_password = self.hash_password(password)
@@ -267,8 +276,12 @@ class AuthService:
                 return False, "User not found"
             
             # Get user credentials from encrypted personal data
-            personal_data = user.personal_data
-            stored_password = personal_data.get('password')
+            try:
+                personal_data = user.personal_data or {}
+                stored_password = personal_data.get('password')
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False, "Authentication error: Unable to retrieve user data"
             
             if not stored_password:
                 return False, "Password not set for this account"
@@ -354,7 +367,11 @@ class AuthService:
             api_key = f"jaa_{secrets.token_urlsafe(32)}"
             
             # Get user personal data
-            personal_data = user.personal_data
+            try:
+                personal_data = user.personal_data or {}
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False, None, "Error retrieving user data"
             
             # Initialize API keys if not present
             if 'api_keys' not in personal_data:
@@ -403,7 +420,11 @@ class AuthService:
                 return False, "User not found"
             
             # Get user personal data
-            personal_data = user.personal_data
+            try:
+                personal_data = user.personal_data or {}
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False, "Error retrieving user data"
             
             # Check if API keys exist
             if 'api_keys' not in personal_data:
@@ -463,7 +484,11 @@ class AuthService:
             users = User.query.filter_by(is_active=True).all()
             
             for user in users:
-                personal_data = user.personal_data
+                try:
+                    personal_data = user.personal_data or {}
+                except Exception as e:
+                    logger.error(f"Error retrieving personal data: {str(e)}")
+                    continue
                 
                 # Check if user has API keys
                 if 'api_keys' not in personal_data:
@@ -521,8 +546,12 @@ class AuthService:
                 return []
             
             # Get roles from user data
-            personal_data = user.personal_data
-            return personal_data.get('roles', ['user'])  # Default to 'user' role
+            try:
+                personal_data = user.personal_data or {}
+                return personal_data.get('roles', ['user'])  # Default to 'user' role
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return ['user']  # Default to 'user' role on error
             
         except Exception as e:
             logger.error(f"Error getting user roles: {str(e)}")
@@ -546,7 +575,11 @@ class AuthService:
                 return False, "User not found"
             
             # Get user data
-            personal_data = user.personal_data
+            try:
+                personal_data = user.personal_data or {}
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False, "Error retrieving user data"
             
             # Initialize roles if not present
             if 'roles' not in personal_data:
@@ -583,7 +616,11 @@ class AuthService:
                 return False, "User not found"
             
             # Get user data
-            personal_data = user.personal_data
+            try:
+                personal_data = user.personal_data or {}
+            except Exception as e:
+                logger.error(f"Error retrieving personal data: {str(e)}")
+                return False, "Error retrieving user data"
             
             # Check if roles exist
             if 'roles' not in personal_data:

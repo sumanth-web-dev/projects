@@ -54,7 +54,8 @@ def create_app(config_name='Config'):
         # Check if admin user exists
         admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
         admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-        
+        admin_role = os.environ.get('ADMIN_ROLE', 'admin')
+
         # Check if user exists
         admin_user = User.query.filter_by(email=admin_email).first()
         if not admin_user:
@@ -62,7 +63,7 @@ def create_app(config_name='Config'):
             success, user_id, message = auth_service.create_user(
                 email=admin_email,
                 password=admin_password,
-                personal_data={'roles': ['admin', 'user']}
+                personal_data={'roles': ['admin', 'user', 'hr']}
             )
             if success:
                 print(f"Created admin user: {admin_email}")
@@ -111,10 +112,17 @@ def create_app(config_name='Config'):
     from models.database import create_tables
     with app.app_context():
         create_tables(app)
-        create_default_admin()
+        # create_default_admin()
     
     # Initialize encryption service
-    app.config['ENCRYPTION_KEY'] = os.environ.get('ENCRYPTION_KEY', 'development_encryption_key_123456789')
+    # Ensure we're using the correct encryption key from environment
+    encryption_key = os.environ.get('ENCRYPTION_KEY')
+    if not encryption_key:
+        app.logger.warning("ENCRYPTION_KEY not found in environment, using fallback from config")
+        encryption_key = app.config.get('ENCRYPTION_KEY', 'development_encryption_key_123456789')
+    
+    app.config['ENCRYPTION_KEY'] = encryption_key
+    app.logger.info(f"Initializing encryption service with key: {encryption_key[:5]}...")
     encryption_service.init_app(app)
     
     # Initialize authentication service

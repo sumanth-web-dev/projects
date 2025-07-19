@@ -1,2 +1,0 @@
-2025-07-18 14:30:28,102 - WARNING - Security event: role_access_denied - User e171c1d9-c2c0-44dc-bc65-372ad9ae5e02 attempted to access /student/dashboard without student role
-2025-07-18 16:30:52,510 - WARNING - Security event: role_access_denied - User e171c1d9-c2c0-44dc-bc65-372ad9ae5e02 attempted to access /admin/dashboard without admin role
