@@ -5,6 +5,7 @@ import os
 from datetime import timedelta
 
 
+
 class Config:
     """Base configuration class."""
     
@@ -32,6 +33,16 @@ class Config:
         instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
         os.makedirs(instance_dir, exist_ok=True)
     
+    
+    EMAIL_NOTIFICATIONS_ENABLED=True
+    SMTP_SERVER= "smtp.gmail.com"
+    SMTP_PORT=587
+    SMTP_USERNAME="bommu7997@gmail.com"
+    SMTP_PASSWORD="yqaa rewa sewz hith"
+    SENDER_EMAIL= 'bommu7997@gmail.com'
+    NOTIFICATIONS_ENABLED = True
+
+
     # Session settings
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
@@ -81,18 +92,24 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:1234@localhost:5432/Test'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
 class ProductionConfig(Config):
     """Production configuration."""
-    DEBUG = False
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:1234@localhost:5432/Test'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
 class TestingConfig(Config):
     """Testing configuration."""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:1234@localhost:5432/Test'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+     
     @staticmethod
     def init_app(app):
         """Initialize testing-specific settings."""

@@ -12,7 +12,7 @@ def run(playwright):
     page = context.new_page()
     
     # Navigate to the URL
-    page.goto("https://careers.wipro.com/job/Bengaluru-Data-Engineer-560035/1162782955/")
+    page.goto("https://career55.sapsf.eu/careers?company=wiprolimitP2")
     playwrite_fuctions.findingfileds(page)
     
     # Perform actions on the page

@@ -1,6 +1,6 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}Student Dashboard - Job Application Agent{% endblock %}
+{% block title %}Student Dashboard - {{ user.personal_data.first_name|default('Student') }}{% endblock %}
 
 {% block sidebar_items %}
 <li><a href="{{ url_for('student.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>

@@ -12,6 +12,7 @@ import sqlite3
 # Initialize SQLAlchemy instance
 db = SQLAlchemy()
 
+
 # Set up logging
 logger = logging.getLogger(__name__)
 

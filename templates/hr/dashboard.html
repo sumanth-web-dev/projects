@@ -1,6 +1,6 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}HR Dashboard - Job Application Agent{% endblock %}
+{% block title %}HR Dashboard - {{ user.personal_data.first_name|default('HR Manager') }}{% endblock %}
 
 {% block sidebar_items %}
 <li><a href="{{ url_for('hr.dashboard') }}" class="active"><i class="fas fa-home"></i> Dashboard</a></li>

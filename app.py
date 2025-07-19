@@ -107,8 +107,10 @@ def create_app(config_name='Config'):
     # Initialize migration manager
     migration_manager.init_app(app)
     
-    # Create default admin user if needed
+    # Create all database tables before creating default admin user
+    from models.database import create_tables
     with app.app_context():
+        create_tables(app)
         create_default_admin()
     
     # Initialize encryption service
@@ -203,7 +205,12 @@ def create_app(config_name='Config'):
         
         return response
     
+
+
+    
     return app
+
+
 
 
 if __name__ == '__main__':
@@ -218,4 +225,6 @@ if __name__ == '__main__':
     for rule in app.url_map.iter_rules():
         print(f"{rule.endpoint}: {rule.rule}")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Run the application on localhost:5000
+    print("Starting application on http://localhost:5000/")
+    app.run(debug=True, host='localhost', port=5000)

@@ -193,7 +193,7 @@ class MonitoringService:
             # System metrics table
             db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS system_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     timestamp TIMESTAMP NOT NULL,
                     cpu_usage REAL NOT NULL,
                     memory_usage REAL NOT NULL,
@@ -206,7 +206,7 @@ class MonitoringService:
             # Application metrics table
             db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS application_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     timestamp TIMESTAMP NOT NULL,
                     request_count INTEGER NOT NULL,
                     error_count INTEGER NOT NULL,
@@ -218,7 +218,7 @@ class MonitoringService:
             # Automation metrics table
             db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS automation_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     timestamp TIMESTAMP NOT NULL,
                     active_sessions INTEGER NOT NULL,
                     jobs_processed INTEGER NOT NULL,

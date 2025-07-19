@@ -275,6 +275,37 @@ def api_key_management():
             }), 400
             
             
+@api_bp.route('/get_user_role', methods=['GET'])
+def get_user_role():
+    """Get the current user's role."""
+    user_id = auth_service.get_current_user_id()
+    
+    if not user_id:
+        return jsonify({
+            'success': False,
+            'message': 'User not authenticated'
+        }), 401
+    
+    # Get user details to determine role
+    from models.user import User
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': 'User not found'
+        }), 404
+    
+    # Get user roles
+    personal_data = user.personal_data or {}
+    roles = personal_data.get('roles', [])
+    
+    return jsonify({
+        'success': True,
+        'roles': roles,
+        'user_id': user_id
+    })
+
 @api_bp.route('/config', methods=['GET', 'PUT'])
 @auth_required
 @csrf_token_required

@@ -58,7 +58,7 @@ class OTPService:
             from sqlalchemy import text
             db.session.execute(text("""
                 CREATE TABLE IF NOT EXISTS otps (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     email TEXT NOT NULL,
                     otp TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,7 +70,9 @@ class OTPService:
             db.session.commit()
             logger.info("OTP table created successfully")
         except Exception as e:
+            db.session.rollback()
             logger.error(f"Error creating OTP table: {str(e)}")
+
     
     def generate_otp(self, email: str) -> str:
         """Generate a new OTP for a user.
@@ -254,4 +256,6 @@ class OTPService:
 
 
 # Create a singleton instance
+
+    
 otp_service = OTPService()

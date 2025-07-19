@@ -4,6 +4,8 @@ Notification service for managing application status updates and alerts.
 This module provides functionality for sending notifications to users through
 various channels including in-app notifications and email.
 """
+
+from flask import session
 import logging
 import json
 import uuid
@@ -16,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from models.database import db
 from models.user import User
 from models.application import Application, ApplicationStatus
+import os
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -72,13 +75,13 @@ class NotificationService:
             app: Flask application instance for configuration
         """
         self.app = app
-        self.smtp_server = None
-        self.smtp_port = None
-        self.smtp_username = None
-        self.smtp_password = None
-        self.sender_email = None
+        self.smtp_server = os.environ.get('SMTP_SERVER')
+        self.smtp_port = os.environ.get('SMTP_PORT')
+        self.smtp_username = os.environ.get('SMTP_USERNAME')
+        self.smtp_password = os.environ.get('SMTP_PASSWORD')
+        self.sender_email = os.environ.get('SENDER_EMAIL')
         self.notifications_enabled = True
-        self.email_notifications_enabled = False
+        self.email_notifications_enabled = True # os.environ.get('EMAIL_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
         
         if app is not None:
             self.init_app(app)
@@ -91,7 +94,7 @@ class NotificationService:
         """
         self.app = app
         self.notifications_enabled = app.config.get('NOTIFICATIONS_ENABLED', True)
-        self.email_notifications_enabled = app.config.get('EMAIL_NOTIFICATIONS_ENABLED', False)
+        self.email_notifications_enabled = app.config.get('EMAIL_NOTIFICATIONS_ENABLED', True)
         
         # Email configuration
         self.smtp_server = app.config.get('SMTP_SERVER')
@@ -360,7 +363,8 @@ class NotificationService:
         if not self.email_notifications_enabled:
             logger.info("Email notifications are disabled, skipping email")
             return False
-        
+        print("#"*20)
+        print(f"{self.smtp_server}, {self.smtp_port}, {self.smtp_username}, {self.smtp_password}, {self.sender_email}")
         if not all([self.smtp_server, self.smtp_port, self.smtp_username, 
                    self.smtp_password, self.sender_email]):
             logger.error("Email configuration is incomplete, cannot send email")
@@ -368,13 +372,13 @@ class NotificationService:
         
         try:
             # Get user email
-            user = User.query.get(user_id)
-            if not user or not user.email:
-                logger.error(f"User {user_id} not found or has no email")
-                return False
+            # user = User.query.get(user_id)
+            # if not user or not user.email:
+            #     logger.error(f"User {user_id} not found or has no email")
+            #     return False
             
-            recipient_email = user.email
-            
+            # recipient_email = user.email
+            recipient_email = session['registration_email'] 
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject

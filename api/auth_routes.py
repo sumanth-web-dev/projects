@@ -12,7 +12,7 @@ from api.security_middleware import validate_json_schema, sanitize_inputs, check
 from utils.input_sanitizer import validate_email
 
 # Create blueprint for auth routes
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -29,7 +29,7 @@ def login():
         
         # Authenticate user
         success, user_data, message = auth_service.authenticate_user(email, password)
-        
+        print(f"Login attempt for {email}: {message}")
         if not success:
             flash(message, 'error')
             return render_template('login.html')
@@ -37,39 +37,50 @@ def login():
         # Get user details to determine role
         from models.user import User
         user_id = user_data.get('id')
-        user = User.query.get(user_id)
         
-        if not user:
-            flash('User not found', 'error')
+        try:
+            user = User.query.get(user_id)
+            
+            if not user:
+                flash('User not found', 'error')
+                return render_template('login.html')
+            
+            # Create a session for the user
+            session['authenticated'] = True
+            session['user_id'] = user_id
+            session['login_time'] = time.time()
+            session['created_at'] = datetime.datetime.utcnow().isoformat()
+            session.permanent = True
+            
+            # Generate CSRF token if not already present
+            if 'csrf_token' not in session:
+                session['csrf_token'] = secrets.token_hex(16)
+            
+            # Get user roles
+            personal_data = user.personal_data or {}
+            roles = personal_data.get('roles', [])
+            
+            # Store roles in session for easier access
+            session['user_roles'] = roles
+            
+            flash('Login successful', 'success')
+            
+            # Direct role-based redirection with hash fragments
+            if 'admin' in roles:
+                return redirect(url_for('admin.dashboard') + '#admin')
+            elif 'hr' in roles:
+                return redirect(url_for('hr.dashboard') + '#hr')    
+            elif 'student' in roles:
+                return redirect(url_for('student.dashboard') + '#student')
+            else:
+                # Default users go to a generic dashboard
+                return redirect(url_for('main.index') + '#user-dashboard')
+                
+        except Exception as e:
+            # If any error occurs during user processing, log it and show error
+            print(f"Login error: {str(e)}")
+            flash('An error occurred during login. Please try again.', 'error')
             return render_template('login.html')
-        
-        # Create a session for the user
-        session['authenticated'] = True
-        session['user_id'] = user_id
-        session['login_time'] = time.time()
-        session['created_at'] = datetime.datetime.utcnow().isoformat()
-        session.permanent = True
-        
-        # Generate CSRF token if not already present
-        if 'csrf_token' not in session:
-            session['csrf_token'] = secrets.token_hex(16)
-        
-        # Get user roles
-        personal_data = user.personal_data or {}
-        roles = personal_data.get('roles', [])
-        
-        flash('Login successful', 'success')
-        
-        # Redirect based on user role
-        if 'admin' in roles:
-            return redirect(url_for('admin.dashboard'))
-        elif 'hr' in roles:
-            return redirect(url_for('hr.dashboard'))
-        elif 'student' in roles:
-            return redirect(url_for('student.dashboard'))
-        else:
-            # Default redirect for users with no specific role
-            return redirect(url_for('main.index'))
     
     # GET request - show login form
     return render_template('login.html')

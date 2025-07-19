@@ -4,106 +4,37 @@ Main routes for the Job Application Agent web interface.
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from services.profile_service import profile_service
 from services.auth_service import auth_service
+from models.database import db
+
 
 # Create blueprint for main routes
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    """Render the home page."""
+    """Render the promotional home page."""
     # Always show the index.html page when accessing the root URL
-    return render_template('index.html')
+    # If user is logged in, they'll be redirected via JavaScript in the template
+    from datetime import datetime
+    return render_template('index.html', now=datetime.now())
     
-@main_bp.route('/dashboard')
-def dashboard():
-    """Render the dashboard based on user role."""
-    # Check if user is logged in
-    user_id = auth_service.get_current_user_id()
-    if user_id:
-        # User is logged in, check their role and redirect accordingly
-        from models.user import User
-        user = User.query.get(user_id)
+
+from sqlalchemy import text
+import traceback
+
+@main_bp.route('/test-connection')
+def test_connection():
+    try:
+        print("🚀 Trying to connect to the database...")
         
-        if user:
-            personal_data = user.personal_data or {}
-            roles = personal_data.get('roles', [])
-            
-            # Redirect based on user role
-            if 'admin' in roles:
-                return redirect(url_for('admin.dashboard'))
-            elif 'hr' in roles:
-                return redirect(url_for('hr.dashboard'))
-            elif 'student' in roles:
-                return redirect(url_for('student.dashboard'))
-            
-        # If no specific role or user not found, show general dashboard
-        return render_template('dashboard.html', user_id=user_id)
-    else:
-        # User is not logged in, redirect to login page
-        flash('Please log in to access your dashboard.', 'error')
-        return redirect(url_for('auth.login'))
-
-@main_bp.route('/profile')
-def profile():
-    """Render the profile management page."""
-    # Get the current user's profile
-    user_id = auth_service.get_current_user_id()
-    if not user_id:
-        flash('Please log in to access your profile.', 'error')
-        return redirect(url_for('auth.login'))
+        with db.engine.connect() as connection:
+            print("✅ Connection established. Executing query...")
+            result = connection.execute(text("SELECT version();"))
+            version = result.fetchone()[0]
+            print("✅ Query executed. Version fetched.")
+        return f"✅ Connected to PostgreSQL: {version}"
     
-    success, profile_data, message = profile_service.get_profile(user_id)
-    if not success:
-        flash(message, 'error')
-        return redirect(url_for('main.index'))
-    
-    return render_template('profile.html', profile=profile_data)
-
-@main_bp.route('/jobs')
-def jobs():
-    """Render the jobs management page."""
-    return render_template('jobs.html')
-
-@main_bp.route('/applications')
-def applications():
-    """Render the applications management page."""
-    return render_template('applications.html')
-
-@main_bp.route('/settings')
-def settings():
-    """Render the settings page."""
-    # Get the current user's ID
-    user_id = auth_service.get_current_user_id()
-    if not user_id:
-        flash('Please log in to access settings.', 'error')
-        return redirect(url_for('auth.login'))
-    
-    # Get user settings and system status
-    from services.settings_service import settings_service
-    
-    user_settings = settings_service.get_user_settings(user_id)
-    credentials = settings_service.get_credentials(user_id)
-    system_status = settings_service.get_system_status()
-    
-    # Flatten settings for template access
-    settings_data = {
-        'default_search_radius': user_settings['general']['default_search_radius'],
-        'job_refresh_interval': user_settings['general']['job_refresh_interval'],
-        'job_sources': user_settings['general']['job_sources'],
-        'theme': user_settings['general']['theme'],
-        'auto_apply_enabled': user_settings['automation']['auto_apply_enabled'],
-        'daily_application_limit': user_settings['automation']['daily_application_limit'],
-        'schedule_days': user_settings['automation']['schedule_days'],
-        'schedule_times': user_settings['automation']['schedule_times'],
-        'browser_type': user_settings['automation']['browser_type'],
-        'headless_mode': user_settings['automation']['headless_mode'],
-        'enable_2fa': user_settings['security']['enable_2fa'],
-        'session_timeout': user_settings['security']['session_timeout'],
-        'enable_api_access': user_settings['security']['enable_api_access'],
-        'api_key': user_settings['security']['api_key'] or '',
-        'credentials': credentials
-    }
-    
-    return render_template('settings.html', 
-                         settings=settings_data, 
-                         system_status=system_status)
+    except Exception as e:
+        print("❌ Connection or query failed.")
+        traceback.print_exc()  # Print full error trace in console
+        return f"❌ Connection failed: {str(e)}"

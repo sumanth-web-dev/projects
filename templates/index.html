@@ -1,214 +1,633 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Job Application Agent{% endblock %}
+{% block title %}Job Application Agent - Your Career Companion{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #4a6fdc;
+        --secondary-color: #34c3ff;
+        --accent-color: #ff6b6b;
+        --dark-color: #2c3e50;
+        --light-color: #f8f9fa;
+        --success-color: #28a745;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: var(--light-color);
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    /* Header Styles */
+    header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1rem 0;
+        position: fixed;
+        width: 100%;
+        top: 0;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+
+    .logo {
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-decoration: none;
+        color: white;
+        display: flex;
+        align-items: center;
+    }
+
+    .logo i {
+        margin-right: 10px;
+        font-size: 1.8rem;
+    }
+
+    .nav-links {
+        display: flex;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-links li {
+        margin-left: 20px;
+    }
+
+    .nav-links a {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .nav-links a:hover {
+        color: var(--accent-color);
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background-color: #ff5252;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline {
+        background-color: transparent;
+        border: 2px solid white;
+    }
+
+    .btn-outline:hover {
+        background-color: white;
+        color: var(--primary-color);
+    }
+
+    /* Hero Section */
+    .hero {
+        padding: 150px 0 100px;
+        text-align: center;
+        background: url('/static/images/hero-bg.jpg') no-repeat center center/cover;
+        position: relative;
+    }
+
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        color: white;
+    }
+
+    .hero h1 {
+        font-size: 3rem;
+        margin-bottom: 20px;
+    }
+
+    .hero p {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Features Section */
+    .features {
+        padding: 80px 0;
+        background-color: white;
+    }
+
+    .section-title {
+        text-align: center;
+        margin-bottom: 50px;
+    }
+
+    .section-title h2 {
+        font-size: 2.5rem;
+        color: var(--dark-color);
+        margin-bottom: 15px;
+    }
+
+    .section-title p {
+        color: #666;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+    }
+
+    .feature-card {
+        background-color: var(--light-color);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        color: var(--dark-color);
+    }
+
+    /* How It Works Section */
+    .how-it-works {
+        padding: 80px 0;
+        background-color: var(--light-color);
+    }
+
+    .steps {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 50px;
+    }
+
+    .step {
+        flex: 1;
+        min-width: 250px;
+        max-width: 300px;
+        margin: 0 20px 40px;
+        text-align: center;
+    }
+
+    .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-radius: 50%;
+        margin: 0 auto 20px;
+    }
+
+    .step h3 {
+        margin-bottom: 15px;
+        color: var(--dark-color);
+    }
+
+    /* Testimonials Section */
+    .testimonials {
+        padding: 80px 0;
+        background-color: white;
+    }
+
+    .testimonial-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+    }
+
+    .testimonial-card {
+        background-color: var(--light-color);
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .testimonial-text {
+        font-style: italic;
+        margin-bottom: 20px;
+    }
+
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+    }
+
+    .author-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-right: 15px;
+    }
+
+    .author-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .author-info h4 {
+        margin: 0;
+        color: var(--dark-color);
+    }
+
+    .author-info p {
+        margin: 5px 0 0;
+        color: #666;
+    }
+
+    /* CTA Section */
+    .cta {
+        padding: 80px 0;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        text-align: center;
+    }
+
+    .cta h2 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+    }
+
+    .cta p {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .cta .btn {
+        background-color: white;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        padding: 12px 30px;
+    }
+
+    .cta .btn:hover {
+        background-color: var(--accent-color);
+        color: white;
+    }
+
+    /* Footer */
+    footer {
+        background-color: var(--dark-color);
+        color: white;
+        padding: 50px 0 20px;
+    }
+
+    .footer-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .footer-column h3 {
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        position: relative;
+        padding-bottom: 10px;
+    }
+
+    .footer-column h3::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 50px;
+        height: 2px;
+        background-color: var(--accent-color);
+    }
+
+    .footer-column ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .footer-column ul li {
+        margin-bottom: 10px;
+    }
+
+    .footer-column a {
+        color: #ccc;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .footer-column a:hover {
+        color: white;
+    }
+
+    .social-links {
+        display: flex;
+        margin-top: 15px;
+    }
+
+    .social-links a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        margin-right: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .social-links a:hover {
+        background-color: var(--accent-color);
+    }
+
+    .copyright {
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.9rem;
+        color: #ccc;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 768px) {
+        .hero h1 {
+            font-size: 2.5rem;
+        }
+
+        .hero p {
+            font-size: 1rem;
+        }
+
+        .section-title h2 {
+            font-size: 2rem;
+        }
+
+        .feature-card,
+        .testimonial-card {
+            padding: 20px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .hero h1 {
+            font-size: 2rem;
+        }
+
+        .btn {
+            padding: 8px 16px;
+        }
+
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .nav-links {
+            margin-top: 15px;
+        }
+
+        .nav-links li {
+            margin: 0 10px;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<header class="main-header">
+<!-- Header -->
+<header>
     <div class="container">
-        <nav class="main-nav">
-            <div class="logo">
-                <h1>Job Application Agent</h1>
-            </div>
-            <div class="nav-links">
-                <a href="{{ url_for('main.index') }}">Home</a>
-                <a href="{{ url_for('main.jobs') }}">Jobs</a>
-                <a href="#">About</a>
-                <a href="#">Contact</a>
-                {% if session.authenticated %}
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Dashboard</a>
-                {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Login</a>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Register</a>
-                {% endif %}
-            </div>
-        </nav>
+        <div class="header-content">
+            <a href="{{ url_for('main.index') }}" class="logo">
+                <i class="fas fa-briefcase"></i>
+                Job Application Agent
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#testimonials">Testimonials</a></li>
+                <li><a href="{{ url_for('auth.login') }}" class="btn btn-outline">Login</a></li>
+                <li><a href="{{ url_for('auth.register') }}" class="btn">Sign Up</a></li>
+            </ul>
+        </div>
     </div>
 </header>
 
+<!-- Hero Section -->
 <section class="hero">
     <div class="container">
         <div class="hero-content">
-            <h1>Find Your Dream Job</h1>
-            <p>Connect with top employers and discover opportunities that match your skills and career goals.</p>
-            <div class="search-box">
-                <form action="{{ url_for('main.jobs') }}" method="GET">
-                    <input type="text" name="q" placeholder="Job title, keywords, or company" class="form-control">
-                    <input type="text" name="location" placeholder="Location" class="form-control">
-                    <button type="submit" class="btn btn-primary">Search Jobs</button>
-                </form>
-            </div>
+            <h1>Your AI-Powered Career Companion</h1>
+            <p>Job Application Agent helps you manage your job applications, prepare for interviews, and land your dream
+                job with personalized AI assistance.</p>
+            <a href="{{ url_for('auth.register') }}" class="btn">Get Started Free</a>
         </div>
     </div>
 </section>
 
-<section class="features">
+<!-- Features Section -->
+<section id="features" class="features">
     <div class="container">
-        <h2 class="section-title">Why Choose Us</h2>
+        <div class="section-title">
+            <h2>Powerful Features</h2>
+            <p>Discover how our platform can streamline your job search process and increase your chances of success.
+            </p>
+        </div>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-search"></i>
                 </div>
                 <h3>Smart Job Matching</h3>
-                <p>Our AI-powered system matches you with jobs that fit your skills and experience.</p>
+                <p>Our AI analyzes your skills and preferences to find the perfect job opportunities that match your
+                    profile.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-file-alt"></i>
                 </div>
-                <h3>Resume Builder</h3>
-                <p>Create professional resumes that stand out to employers.</p>
+                <h3>Resume Optimization</h3>
+                <p>Get personalized suggestions to improve your resume and make it stand out to recruiters and ATS
+                    systems.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-briefcase"></i>
+                    <i class="fas fa-calendar-check"></i>
                 </div>
-                <h3>Career Resources</h3>
-                <p>Access guides, tips, and tools to advance your career.</p>
+                <h3>Application Tracking</h3>
+                <p>Keep track of all your job applications in one place with status updates and follow-up reminders.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h3>Interview Preparation</h3>
+                <p>Practice with our AI interviewer and get feedback to improve your performance in real interviews.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3>Application Tracking</h3>
-                <p>Monitor your job applications and interview status in one place.</p>
+                <h3>Career Analytics</h3>
+                <p>Gain insights into your job search progress and identify areas for improvement.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Assistant</h3>
+                <p>Get 24/7 support from our AI assistant for any job-related questions or guidance.</p>
             </div>
         </div>
     </div>
 </section>
 
-<section class="job-categories">
+<!-- How It Works Section -->
+<section id="how-it-works" class="how-it-works">
     <div class="container">
-        <h2 class="section-title">Popular Job Categories</h2>
-        <div class="category-grid">
-            <a href="{{ url_for('main.jobs', category='technology') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-laptop-code"></i>
-                </div>
-                <h3>Technology</h3>
-                <p>1,200+ jobs</p>
-            </a>
-            <a href="{{ url_for('main.jobs', category='finance') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-chart-pie"></i>
-                </div>
-                <h3>Finance</h3>
-                <p>850+ jobs</p>
-            </a>
-            <a href="{{ url_for('main.jobs', category='healthcare') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-heartbeat"></i>
-                </div>
-                <h3>Healthcare</h3>
-                <p>950+ jobs</p>
-            </a>
-            <a href="{{ url_for('main.jobs', category='education') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <h3>Education</h3>
-                <p>600+ jobs</p>
-            </a>
-            <a href="{{ url_for('main.jobs', category='marketing') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-bullhorn"></i>
-                </div>
-                <h3>Marketing</h3>
-                <p>750+ jobs</p>
-            </a>
-            <a href="{{ url_for('main.jobs', category='design') }}" class="category-card">
-                <div class="category-icon">
-                    <i class="fas fa-paint-brush"></i>
-                </div>
-                <h3>Design</h3>
-                <p>500+ jobs</p>
-            </a>
+        <div class="section-title">
+            <h2>How It Works</h2>
+            <p>Getting started with Job Application Agent is easy. Follow these simple steps to begin your journey to
+                career success.</p>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Create Your Profile</h3>
+                <p>Sign up and build your professional profile with your skills, experience, and job preferences.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Upload Your Resume</h3>
+                <p>Upload your existing resume or create a new one with our AI-powered resume builder.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Discover Opportunities</h3>
+                <p>Browse through personalized job recommendations or search for specific positions.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Apply with Confidence</h3>
+                <p>Apply to jobs with optimized application materials and track your progress.</p>
+            </div>
         </div>
     </div>
 </section>
 
-<section class="featured-jobs">
+<!-- Testimonials Section -->
+<section id="testimonials" class="testimonials">
     <div class="container">
-        <h2 class="section-title">Featured Jobs</h2>
-        <div class="jobs-container">
-            <div class="job-card">
-                <h3>Senior Software Engineer</h3>
-                <div class="company">Acme Corporation</div>
-                <div class="details">
-                    <p><strong>Location:</strong> New York, NY</p>
-                    <p><strong>Salary:</strong> $120,000 - $150,000</p>
-                    <p><strong>Type:</strong> Full-time</p>
-                </div>
-                <div class="actions">
-                    <a href="#" class="btn btn-secondary">View Details</a>
-                    <a href="#" class="btn btn-primary">Apply</a>
-                </div>
-            </div>
-            
-            <div class="job-card">
-                <h3>Full Stack Developer</h3>
-                <div class="company">Tech Innovations Inc.</div>
-                <div class="details">
-                    <p><strong>Location:</strong> Remote</p>
-                    <p><strong>Salary:</strong> $100,000 - $130,000</p>
-                    <p><strong>Type:</strong> Full-time</p>
-                </div>
-                <div class="actions">
-                    <a href="#" class="btn btn-secondary">View Details</a>
-                    <a href="#" class="btn btn-primary">Apply</a>
-                </div>
-            </div>
-            
-            <div class="job-card">
-                <h3>DevOps Engineer</h3>
-                <div class="company">Cloud Solutions Ltd.</div>
-                <div class="details">
-                    <p><strong>Location:</strong> San Francisco, CA</p>
-                    <p><strong>Salary:</strong> $130,000 - $160,000</p>
-                    <p><strong>Type:</strong> Full-time</p>
-                </div>
-                <div class="actions">
-                    <a href="#" class="btn btn-secondary">View Details</a>
-                    <a href="#" class="btn btn-primary">Apply</a>
-                </div>
-            </div>
+        <div class="section-title">
+            <h2>Success Stories</h2>
+            <p>Hear from our users who have successfully landed their dream jobs with the help of Job Application Agent.
+            </p>
         </div>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('main.jobs') }}" class="btn btn-primary">View All Jobs</a>
-        </div>
-    </div>
-</section>
-
-<section class="testimonials">
-    <div class="container">
-        <h2 class="section-title">What Our Users Say</h2>
-        <div class="testimonial-slider">
-            <div class="testimonial">
-                <div class="testimonial-content">
-                    <p>"I found my dream job within two weeks of using this platform. The job matching algorithm is incredibly accurate!"</p>
+        <div class="testimonial-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-text">
+                    <p>"Job Application Agent helped me organize my job search and prepare for interviews. I landed a
+                        software engineering role at a top tech company within a month!"</p>
                 </div>
                 <div class="testimonial-author">
                     <div class="author-avatar">
-                        <img src="{{ url_for('static', filename='img/avatar1.jpg') }}" alt="User Avatar">
+                        <img src="/static/images/testimonial-1.jpg" alt="User Avatar">
                     </div>
                     <div class="author-info">
-                        <h4>John Smith</h4>
-                        <p>Software Developer</p>
+                        <h4>Alex Johnson</h4>
+                        <p>Software Engineer</p>
                     </div>
                 </div>
             </div>
-            
-            <div class="testimonial">
-                <div class="testimonial-content">
-                    <p>"As an HR manager, this platform has streamlined our recruitment process. We've found amazing talent quickly and efficiently."</p>
+            <div class="testimonial-card">
+                <div class="testimonial-text">
+                    <p>"The resume optimization feature was a game-changer. I started getting callbacks immediately
+                        after implementing the suggestions. Highly recommended!"</p>
                 </div>
                 <div class="testimonial-author">
                     <div class="author-avatar">
-                        <img src="{{ url_for('static', filename='img/avatar2.jpg') }}" alt="User Avatar">
+                        <img src="/static/images/testimonial-2.jpg" alt="User Avatar">
                     </div>
                     <div class="author-info">
-                        <h4>Sarah Johnson</h4>
-                        <p>HR Director</p>
+                        <h4>Sarah Williams</h4>
+                        <p>Marketing Manager</p>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-text">
+                    <p>"As a recent graduate, I was struggling to find entry-level positions. The AI assistant helped me
+                        identify skills to develop and connected me with suitable opportunities."</p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="/static/images/testimonial-3.jpg" alt="User Avatar">
+                    </div>
+                    <div class="author-info">
+                        <h4>Michael Chen</h4>
+                        <p>Data Analyst</p>
                     </div>
                 </div>
             </div>
@@ -216,353 +635,92 @@
     </div>
 </section>
 
-<footer class="main-footer">
+<!-- CTA Section -->
+<section class="cta">
     <div class="container">
-        <div class="footer-grid">
-            <div class="footer-col">
+        <h2>Ready to Transform Your Job Search?</h2>
+        <p>Join thousands of professionals who have already found success with Job Application Agent. Start your journey
+            today!</p>
+        <a href="{{ url_for('auth.register') }}" class="btn">Sign Up Now</a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-column">
                 <h3>Job Application Agent</h3>
-                <p>Connecting talent with opportunity.</p>
+                <p>Your AI-powered career companion that helps you find and land your dream job.</p>
                 <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
                     <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
                     <a href="#"><i class="fab fa-instagram"></i></a>
                 </div>
             </div>
-            <div class="footer-col">
-                <h4>For Job Seekers</h4>
+            <div class="footer-column">
+                <h3>Quick Links</h3>
                 <ul>
-                    <li><a href="#">Browse Jobs</a></li>
-                    <li><a href="#">Career Resources</a></li>
-                    <li><a href="#">Resume Builder</a></li>
-                    <li><a href="#">Job Alerts</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>For Employers</h4>
-                <ul>
-                    <li><a href="#">Post a Job</a></li>
-                    <li><a href="#">Browse Candidates</a></li>
-                    <li><a href="#">Recruitment Solutions</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#testimonials">Testimonials</a></li>
                     <li><a href="#">Pricing</a></li>
+                    <li><a href="#">FAQ</a></li>
                 </ul>
             </div>
-            <div class="footer-col">
-                <h4>Contact Us</h4>
-                <ul class="contact-info">
-                    <li><i class="fas fa-map-marker-alt"></i> 123 Main Street, City, Country</li>
-                    <li><i class="fas fa-phone"></i> +1 234 567 890</li>
-                    <li><i class="fas fa-envelope"></i> info@jobagent.com</li>
+            <div class="footer-column">
+                <h3>Resources</h3>
+                <ul>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Career Tips</a></li>
+                    <li><a href="#">Interview Guide</a></li>
+                    <li><a href="#">Resume Templates</a></li>
+                    <li><a href="#">Job Market Trends</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Contact Us</h3>
+                <ul>
+                    <li><a href="mailto:support@jobapplicationagent.com">support@jobapplicationagent.com</a></li>
+                    <li><a href="tel:+1234567890">+1 (234) 567-890</a></li>
+                    <li><a href="#">Help Center</a></li>
                 </ul>
             </div>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Job Application Agent. All rights reserved.</p>
-            <div class="footer-links">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Cookies Policy</a>
-            </div>
+        <div class="copyright">
+            <p>&copy; {{ now.year }} Job Application Agent. All rights reserved.</p>
         </div>
     </div>
 </footer>
 
-<style>
-    /* Additional styles for the landing page */
-    .main-header {
-        background-color: white;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        padding: 1rem 0;
-        position: fixed;
-        width: 100%;
-        top: 0;
-        z-index: 1000;
-    }
-    
-    .main-nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .logo h1 {
-        margin: 0;
-        font-size: 1.5rem;
-        color: var(--primary-color);
-    }
-    
-    .nav-links {
-        display: flex;
-        align-items: center;
-    }
-    
-    .nav-links a {
-        margin-left: 1.5rem;
-        color: var(--dark-color);
-    }
-    
-    .hero {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 8rem 0 4rem;
-        text-align: center;
-    }
-    
-    .hero-content h1 {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .hero-content p {
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    
-    .search-box {
-        max-width: 800px;
-        margin: 0 auto;
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: var(--shadow);
-    }
-    
-    .search-box form {
-        display: flex;
-        gap: 1rem;
-    }
-    
-    .section-title {
-        text-align: center;
-        margin-bottom: 2rem;
-        font-size: 2rem;
-    }
-    
-    .features {
-        padding: 4rem 0;
-        background-color: white;
-    }
-    
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 2rem;
-    }
-    
-    .feature-card {
-        text-align: center;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: var(--shadow);
-        transition: transform 0.3s;
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-10px);
-    }
-    
-    .feature-icon {
-        font-size: 2.5rem;
-        color: var(--primary-color);
-        margin-bottom: 1rem;
-    }
-    
-    .job-categories {
-        padding: 4rem 0;
-        background-color: var(--light-color);
-    }
-    
-    .category-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-    }
-    
-    .category-card {
-        background-color: white;
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: var(--shadow);
-        transition: transform 0.3s;
-        color: var(--dark-color);
-        text-decoration: none;
-    }
-    
-    .category-card:hover {
-        transform: translateY(-5px);
-        text-decoration: none;
-    }
-    
-    .category-icon {
-        font-size: 2rem;
-        color: var(--primary-color);
-        margin-bottom: 1rem;
-    }
-    
-    .featured-jobs {
-        padding: 4rem 0;
-        background-color: white;
-    }
-    
-    .testimonials {
-        padding: 4rem 0;
-        background-color: var(--light-color);
-    }
-    
-    .testimonial {
-        background-color: white;
-        border-radius: 8px;
-        padding: 2rem;
-        box-shadow: var(--shadow);
-        margin: 0 1rem;
-    }
-    
-    .testimonial-content {
-        font-style: italic;
-        margin-bottom: 1.5rem;
-    }
-    
-    .testimonial-author {
-        display: flex;
-        align-items: center;
-    }
-    
-    .author-avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        overflow: hidden;
-        margin-right: 1rem;
-    }
-    
-    .author-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    
-    .author-info h4 {
-        margin: 0;
-        font-size: 1rem;
-    }
-    
-    .author-info p {
-        margin: 0;
-        color: var(--gray-color);
-        font-size: 0.875rem;
-    }
-    
-    .main-footer {
-        background-color: var(--secondary-color);
-        color: white;
-        padding: 4rem 0 1rem;
-    }
-    
-    .footer-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .footer-col h3, .footer-col h4 {
-        margin-top: 0;
-        margin-bottom: 1.5rem;
-    }
-    
-    .footer-col ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .footer-col ul li {
-        margin-bottom: 0.5rem;
-    }
-    
-    .footer-col a {
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-    }
-    
-    .footer-col a:hover {
-        color: white;
-        text-decoration: underline;
-    }
-    
-    .social-links {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-    
-    .social-links a {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background-color: rgba(255, 255, 255, 0.1);
-        color: white;
-        transition: background-color 0.3s;
-    }
-    
-    .social-links a:hover {
-        background-color: var(--primary-color);
-    }
-    
-    .contact-info li {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.75rem;
-    }
-    
-    .contact-info li i {
-        margin-right: 0.5rem;
-    }
-    
-    .footer-bottom {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    
-    .footer-links a {
-        color: rgba(255, 255, 255, 0.8);
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
-    
-    .footer-links a:hover {
-        color: white;
-        text-decoration: underline;
-    }
-    
-    @media (max-width: 768px) {
-        .search-box form {
-            flex-direction: column;
-        }
-        
-        .footer-bottom {
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .footer-links {
-            margin-top: 1rem;
-        }
-        
-        .footer-links a {
-            margin: 0 0.75rem;
-        }
-    }
-</style>
+<!-- JavaScript to check login status and redirect -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if user is logged in
+        fetch('/api/get_user_role')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // User is logged in, redirect based on role
+                    const roles = data.roles || [];
+
+                    if (roles.includes('admin')) {
+                        window.location.href = '/admin/dashboard';
+                    } else if (roles.includes('hr')) {
+                        window.location.href = '/hr/dashboard';
+                    } else if (roles.includes('student')) {
+                        window.location.href = '/student/dashboard';
+                    } else {
+                        window.location.href = '/user/dashboard';
+                    }
+                }
+                // If not logged in, stay on the landing page
+            })
+            .catch(error => {
+                console.error('Error checking login status:', error);
+                // Stay on landing page if there's an error
+            });
+    });
+</script>
 {% endblock %}
