@@ -694,33 +694,5 @@
     </div>
 </footer>
 
-<!-- JavaScript to check login status and redirect -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Check if user is logged in
-        fetch('/api/get_user_role')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // User is logged in, redirect based on role
-                    const roles = data.roles || [];
-
-                    if (roles.includes('admin')) {
-                        window.location.href = '/admin/dashboard';
-                    } else if (roles.includes('hr')) {
-                        window.location.href = '/hr/dashboard';
-                    } else if (roles.includes('student')) {
-                        window.location.href = '/student/dashboard';
-                    } else {
-                        window.location.href = '/user/dashboard';
-                    }
-                }
-                // If not logged in, stay on the landing page
-            })
-            .catch(error => {
-                console.error('Error checking login status:', error);
-                // Stay on landing page if there's an error
-            });
-    });
-</script>
+<!-- Login status check is handled by main.js -->
 {% endblock %}

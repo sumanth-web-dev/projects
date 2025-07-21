@@ -1,4 +1,4 @@
-{% extends "dashboard_base.html" %}
+{% extends "common/base.html" %}
 
 {% block title %}{% block student_title %}Student Portal{% endblock %} - Job Application Agent{% endblock %}
 
@@ -44,10 +44,11 @@
 </a>
 {% endblock %}
 
-{% block dashboard_content %}
+{% block content %}
 <div class="student-content-wrapper">
     {% block student_content %}
     <!-- Student content will be inserted by child templates -->
     {% endblock student_content %}
 </div>
-{% endblock dashboard_content %}
+
+{% endblock content %}

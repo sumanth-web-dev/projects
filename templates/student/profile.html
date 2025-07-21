@@ -1,8 +1,8 @@
-{% extends "dashboard_base.html" %}
+{% extends "student/base.html" %}
 
 {% block title %}My Profile - Student Dashboard{% endblock %}
 
-{% block sidebar_items %}
+{% block sidebar_content %}
 <li><a href="{{ url_for('student.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
 <li><a href="{{ url_for('student.profile') }}" class="active"><i class="fas fa-user"></i> Profile</a></li>
 <li><a href="{{ url_for('student.resume') }}"><i class="fas fa-file-alt"></i> Resume</a></li>
@@ -22,57 +22,83 @@
 {% block page_title %}My Profile{% endblock %}
 
 {% block page_actions %}
-<button class="btn btn-primary" onclick="saveProfile()"><i class="fas fa-save"></i> Save Profile</button>
-<button class="btn btn-secondary" onclick="previewProfile()"><i class="fas fa-eye"></i> Preview</button>
+<button class="btn btn-primary animate-btn" onclick="saveProfile()">
+    <i class="fas fa-save"></i> Save Profile
+</button>
+<button class="btn btn-secondary animate-btn" onclick="previewProfile()">
+    <i class="fas fa-eye"></i> Preview
+</button>
 {% endblock %}
 
-{% block dashboard_content %}
-<div class="profile-container">
-    <div class="profile-progress">
-        <div class="card">
+{% block student_content %}
+<div class="profile-container fade-in">
+    <!-- Profile Progress Section -->
+    <div class="profile-progress slide-up">
+        <div class="card gradient-card">
             <div class="card-body">
                 <div class="progress-header">
-                    <h3>Profile Completion</h3>
-                    <span class="completion-percentage">{{ profile_completion|default(0) }}%</span>
+                    <h3><i class="fas fa-chart-line"></i> Profile Completion</h3>
+                    <span class="completion-percentage animate-number">{{ profile_completion|default(0) }}%</span>
                 </div>
-                <div class="progress mb-3">
-                    <div class="progress-bar" role="progressbar" style="width: {{ profile_completion|default(0) }}%"></div>
+                <div class="progress mb-3 animated-progress">
+                    <div class="progress-bar progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: {{ profile_completion|default(0) }}%"
+                         data-percentage="{{ profile_completion|default(0) }}">
+                    </div>
                 </div>
                 <div class="completion-tips">
-                    {% if profile_completion < 100 %}
-                    <p class="text-muted">Complete your profile to get better job recommendations and increase your visibility to recruiters.</p>
+                    {% if profile_completion|default(0) < 100 %}
+                        <p class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Complete your profile to get better job recommendations and increase your visibility to recruiters.
+                        </p>
                     {% else %}
-                    <p class="text-success">Great! Your profile is complete. Keep it updated to attract the best opportunities.</p>
+                        <p class="text-success">
+                            <i class="fas fa-check-circle"></i>
+                            Great! Your profile is complete. Keep it updated to attract the best opportunities.
+                        </p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <form id="profileForm" method="POST" action="{{ url_for('student.update_profile') }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
-        
-        <div class="profile-section">
-            <div class="card">
+    <!-- Auto-save indicator -->
+    <div id="autoSaveIndicator" class="auto-save-indicator">
+        <i class="fas fa-save"></i> Auto-saved
+    </div>
+
+    <form id="profileForm" method="POST" action="{{ url_for('student.profile') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Basic Information Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Basic Information</h3>
+                    <h3><i class="fas fa-user-circle"></i> Basic Information</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="profile-photo-section">
-                                <div class="profile-photo">
-                                    {% if user.personal_data.profile_picture %}
-                                        <img src="{{ user.personal_data.profile_picture }}" alt="Profile Picture" id="profileImage">
-                                    {% else %}
-                                        <div class="photo-placeholder" id="profileImage">
-                                            <i class="fas fa-user"></i>
+                                <div class="profile-photo-wrapper">
+                                    <div class="profile-photo">
+                                        {% if user.personal_data.get('profile_picture') %}
+                                            <img src="{{ user.personal_data.get('profile_picture') }}" alt="Profile Picture" id="profileImage">
+                                        {% else %}
+                                            <div class="photo-placeholder" id="profileImage">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div class="photo-overlay">
+                                            <i class="fas fa-camera"></i>
                                         </div>
-                                    {% endif %}
+                                    </div>
                                 </div>
                                 <div class="photo-actions">
                                     <input type="file" id="profile_picture" name="profile_picture" accept="image/*" style="display: none;" onchange="previewImage(this)">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('profile_picture').click()">
+                                    <button type="button" class="btn btn-outline-primary btn-sm animate-btn" onclick="document.getElementById('profile_picture').click()">
                                         <i class="fas fa-camera"></i> Change Photo
                                     </button>
                                 </div>
@@ -81,67 +107,71 @@
                         <div class="col-md-8">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="first_name">First Name <span class="required">*</span></label>
+                                    <div class="form-group floating-label">
                                         <input type="text" id="first_name" name="first_name" class="form-control" 
-                                               value="{{ user.personal_data.first_name|default('') }}" required>
+                                               value="{{ user.personal_data.get('first_name', '') }}" required>
+                                        <label for="first_name">First Name <span class="required">*</span></label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="last_name">Last Name <span class="required">*</span></label>
+                                    <div class="form-group floating-label">
                                         <input type="text" id="last_name" name="last_name" class="form-control" 
-                                               value="{{ user.personal_data.last_name|default('') }}" required>
+                                               value="{{ user.personal_data.get('last_name', '') }}" required>
+                                        <label for="last_name">Last Name <span class="required">*</span></label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="email">Email Address</label>
+                            <div class="form-group floating-label">
                                 <input type="email" id="email" name="email" class="form-control" 
                                        value="{{ user.email }}" readonly>
-                                <small class="form-text text-muted">Email cannot be changed. Contact support if needed.</small>
+                                <label for="email">Email Address</label>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lock"></i> Email cannot be changed. Contact support if needed.
+                                </small>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="phone">Phone Number</label>
+                                    <div class="form-group floating-label">
                                         <input type="tel" id="phone" name="phone" class="form-control" 
-                                               value="{{ user.personal_data.phone|default('') }}">
+                                               value="{{ user.personal_data.get('phone', '') }}">
+                                        <label for="phone">Phone Number</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="date_of_birth">Date of Birth</label>
+                                    <div class="form-group floating-label">
                                         <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" 
-                                               value="{{ user.personal_data.date_of_birth|default('') }}">
+                                               value="{{ user.personal_data.get('date_of_birth', '') }}">
+                                        <label for="date_of_birth">Date of Birth</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="bio">Professional Summary</label>
+
+                    <div class="form-group floating-label">
                         <textarea id="bio" name="bio" class="form-control" rows="4" 
-                                  placeholder="Write a brief professional summary about yourself...">{{ user.personal_data.bio|default('') }}</textarea>
-                        <small class="form-text text-muted">This will be visible to recruiters and employers.</small>
+                                  placeholder="Write a brief professional summary about yourself...">{{ user.personal_data.get('bio', '') }}</textarea>
+                        <label for="bio">Professional Summary</label>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-eye"></i> This will be visible to recruiters and employers.
+                        </small>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="location">Current Location</label>
+                            <div class="form-group floating-label">
                                 <input type="text" id="location" name="location" class="form-control" 
-                                       value="{{ user.personal_data.location|default('') }}" 
+                                       value="{{ user.personal_data.get('location', '') }}" 
                                        placeholder="City, State/Country">
+                                <label for="location">Current Location</label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="preferred_location">Preferred Work Location</label>
+                            <div class="form-group floating-label">
                                 <input type="text" id="preferred_location" name="preferred_location" class="form-control" 
-                                       value="{{ user.personal_data.preferred_location|default('') }}" 
+                                       value="{{ user.personal_data.get('preferred_location', '') }}" 
                                        placeholder="City, State/Country or Remote">
+                                <label for="preferred_location">Preferred Work Location</label>
                             </div>
                         </div>
                     </div>
@@ -149,249 +179,284 @@
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="card">
+        <!-- Education Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Education</h3>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addEducation()">
+                    <h3><i class="fas fa-graduation-cap"></i> Education</h3>
+                    <button type="button" class="btn btn-sm btn-primary animate-btn" onclick="addEducation()">
                         <i class="fas fa-plus"></i> Add Education
                     </button>
                 </div>
                 <div class="card-body">
                     <div id="education-container">
                         {% for education in user.personal_data.education|default([]) %}
-                        <div class="education-item">
+                        <div class="education-item dynamic-item">
+                            <div class="item-header">
+                                <h5><i class="fas fa-university"></i> Education Entry</h5>
+                                <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeEducation(this)">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Institution Name</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="education[{{ loop.index0 }}][institution]" class="form-control" 
                                                value="{{ education.institution }}">
+                                        <label>Institution Name</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Degree</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="education[{{ loop.index0 }}][degree]" class="form-control" 
                                                value="{{ education.degree }}">
+                                        <label>Degree</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Field of Study</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="education[{{ loop.index0 }}][field]" class="form-control" 
                                                value="{{ education.field }}">
+                                        <label>Field of Study</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Graduation Year</label>
+                                    <div class="form-group floating-label">
                                         <input type="number" name="education[{{ loop.index0 }}][year]" class="form-control" 
                                                value="{{ education.year }}" min="1950" max="2030">
+                                        <label>Graduation Year</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>GPA/Grade</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="education[{{ loop.index0 }}][gpa]" class="form-control" 
                                                value="{{ education.gpa|default('') }}" placeholder="e.g., 3.8/4.0 or 85%">
+                                        <label>GPA/Grade</label>
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEducation(this)">
-                                <i class="fas fa-trash"></i> Remove
-                            </button>
                         </div>
                         {% endfor %}
                     </div>
+                    <div id="education-empty" class="empty-state" {% if user.personal_data.education %}style="display: none;"{% endif %}>
+                        <i class="fas fa-graduation-cap"></i>
+                        <p>No education entries yet. Click "Add Education" to get started.</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="card">
+        <!-- Skills Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Skills</h3>
+                    <h3><i class="fas fa-cogs"></i> Skills</h3>
                 </div>
                 <div class="card-body">
-                    <div class="form-group">
-                        <label for="skills">Technical Skills</label>
+                    <div class="form-group floating-label">
                         <input type="text" id="skills" name="skills" class="form-control" 
                                value="{{ user.personal_data.skills|join(', ') if user.personal_data.skills else '' }}" 
                                placeholder="e.g., Python, JavaScript, React, SQL">
-                        <small class="form-text text-muted">Separate skills with commas</small>
+                        <label for="skills">Technical Skills</label>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Separate skills with commas
+                        </small>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="languages">Languages</label>
+                    <div class="skills-preview" id="skillsPreview"></div>
+
+                    <div class="form-group floating-label">
                         <input type="text" id="languages" name="languages" class="form-control" 
                                value="{{ user.personal_data.languages|join(', ') if user.personal_data.languages else '' }}" 
                                placeholder="e.g., English (Native), Spanish (Fluent), French (Basic)">
-                        <small class="form-text text-muted">Include proficiency level in parentheses</small>
+                        <label for="languages">Languages</label>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Include proficiency level in parentheses
+                        </small>
                     </div>
+                    <div class="languages-preview" id="languagesPreview"></div>
                 </div>
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="card">
+        <!-- Experience Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Experience</h3>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addExperience()">
+                    <h3><i class="fas fa-briefcase"></i> Experience</h3>
+                    <button type="button" class="btn btn-sm btn-primary animate-btn" onclick="addExperience()">
                         <i class="fas fa-plus"></i> Add Experience
                     </button>
                 </div>
                 <div class="card-body">
                     <div id="experience-container">
                         {% for experience in user.personal_data.experience|default([]) %}
-                        <div class="experience-item">
+                        <div class="experience-item dynamic-item">
+                            <div class="item-header">
+                                <h5><i class="fas fa-building"></i> Work Experience</h5>
+                                <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeExperience(this)">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Job Title</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="experience[{{ loop.index0 }}][title]" class="form-control" 
                                                value="{{ experience.title }}">
+                                        <label>Job Title</label>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label>Company</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="experience[{{ loop.index0 }}][company]" class="form-control" 
                                                value="{{ experience.company }}">
+                                        <label>Company</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Start Date</label>
+                                    <div class="form-group floating-label">
                                         <input type="month" name="experience[{{ loop.index0 }}][start_date]" class="form-control" 
                                                value="{{ experience.start_date }}">
+                                        <label>Start Date</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>End Date</label>
+                                    <div class="form-group floating-label">
                                         <input type="month" name="experience[{{ loop.index0 }}][end_date]" class="form-control" 
-                                               value="{{ experience.end_date }}">
+                                               value="{{ experience.end_date }}" id="end_date_{{ loop.index0 }}">
+                                        <label>End Date</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label>&nbsp;</label>
-                                        <div class="form-check">
-                                            <input type="checkbox" name="experience[{{ loop.index0 }}][current]" class="form-check-input" 
-                                                   {% if experience.current %}checked{% endif %}>
-                                            <label class="form-check-label">Currently working here</label>
+                                        <div class="form-check custom-checkbox">
+                                            <input type="checkbox" name="experience[{{ loop.index0 }}][current]" 
+                                                   class="form-check-input" id="current_{{ loop.index0 }}"
+                                                   {% if experience.current %}checked{% endif %}
+                                                   onchange="toggleEndDate({{ loop.index0 }})">
+                                            <label class="form-check-label" for="current_{{ loop.index0 }}">
+                                                Currently working here
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Description</label>
+                            <div class="form-group floating-label">
                                 <textarea name="experience[{{ loop.index0 }}][description]" class="form-control" rows="3" 
                                           placeholder="Describe your responsibilities and achievements...">{{ experience.description }}</textarea>
+                                <label>Description</label>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExperience(this)">
-                                <i class="fas fa-trash"></i> Remove
-                            </button>
                         </div>
                         {% endfor %}
+                    </div>
+                    <div id="experience-empty" class="empty-state" {% if user.personal_data.experience %}style="display: none;"{% endif %}>
+                        <i class="fas fa-briefcase"></i>
+                        <p>No work experience yet. Click "Add Experience" to get started.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="card">
+        <!-- Projects Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Projects</h3>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="addProject()">
+                    <h3><i class="fas fa-project-diagram"></i> Projects</h3>
+                    <button type="button" class="btn btn-sm btn-primary animate-btn" onclick="addProject()">
                         <i class="fas fa-plus"></i> Add Project
                     </button>
                 </div>
                 <div class="card-body">
                     <div id="projects-container">
                         {% for project in user.personal_data.projects|default([]) %}
-                        <div class="project-item">
+                        <div class="project-item dynamic-item">
+                            <div class="item-header">
+                                <h5><i class="fas fa-code"></i> Project</h5>
+                                <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeProject(this)">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
                             <div class="row">
                                 <div class="col-md-8">
-                                    <div class="form-group">
-                                        <label>Project Name</label>
+                                    <div class="form-group floating-label">
                                         <input type="text" name="projects[{{ loop.index0 }}][name]" class="form-control" 
                                                value="{{ project.name }}">
+                                        <label>Project Name</label>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Project URL</label>
+                                    <div class="form-group floating-label">
                                         <input type="url" name="projects[{{ loop.index0 }}][url]" class="form-control" 
                                                value="{{ project.url|default('') }}" placeholder="https://...">
+                                        <label>Project URL</label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Description</label>
+                            <div class="form-group floating-label">
                                 <textarea name="projects[{{ loop.index0 }}][description]" class="form-control" rows="3" 
                                           placeholder="Describe the project, technologies used, and your role...">{{ project.description }}</textarea>
+                                <label>Description</label>
                             </div>
-                            <div class="form-group">
-                                <label>Technologies Used</label>
+                            <div class="form-group floating-label">
                                 <input type="text" name="projects[{{ loop.index0 }}][technologies]" class="form-control" 
                                        value="{{ project.technologies|join(', ') if project.technologies else '' }}" 
                                        placeholder="e.g., React, Node.js, MongoDB">
+                                <label>Technologies Used</label>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProject(this)">
-                                <i class="fas fa-trash"></i> Remove
-                            </button>
                         </div>
                         {% endfor %}
+                    </div>
+                    <div id="projects-empty" class="empty-state" {% if user.personal_data.projects %}style="display: none;"{% endif %}>
+                        <i class="fas fa-project-diagram"></i>
+                        <p>No projects yet. Click "Add Project" to showcase your work.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="card">
+        <!-- Social Links Section -->
+        <div class="profile-section slide-up">
+            <div class="card modern-card">
                 <div class="card-header">
-                    <h3>Social Links</h3>
+                    <h3><i class="fas fa-share-alt"></i> Social Links</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="linkedin">LinkedIn Profile</label>
+                            <div class="form-group floating-label">
                                 <input type="url" id="linkedin" name="linkedin" class="form-control" 
-                                       value="{{ user.personal_data.social_links.linkedin|default('') }}" 
+                                       value="{{ user.personal_data['social_links'].get('linkedin', '') }}" 
                                        placeholder="https://linkedin.com/in/yourprofile">
+                                <label for="linkedin"><i class="fab fa-linkedin"></i> LinkedIn Profile</label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="github">GitHub Profile</label>
+                            <div class="form-group floating-label">
                                 <input type="url" id="github" name="github" class="form-control" 
-                                       value="{{ user.personal_data.social_links.github|default('') }}" 
+                                       value="{{ user.personal_data['social_links'].get('github', '') }}" 
                                        placeholder="https://github.com/yourusername">
+                                <label for="github"><i class="fab fa-github"></i> GitHub Profile</label>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="portfolio">Portfolio Website</label>
+                            <div class="form-group floating-label">
                                 <input type="url" id="portfolio" name="portfolio" class="form-control" 
-                                       value="{{ user.personal_data.social_links.portfolio|default('') }}" 
+                                       value="{{ user.personal_data['social_links'].get('portfolio', '') }}" 
                                        placeholder="https://yourportfolio.com">
+                                <label for="portfolio"><i class="fas fa-globe"></i> Portfolio Website</label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="twitter">Twitter Profile</label>
+                            <div class="form-group floating-label">
                                 <input type="url" id="twitter" name="twitter" class="form-control" 
-                                       value="{{ user.personal_data.social_links.twitter|default('') }}" 
+                                       value="{{ user.personal_data['social_links'].get('twitter', '') }}" 
                                        placeholder="https://twitter.com/yourusername">
+                                <label for="twitter"><i class="fab fa-twitter"></i> Twitter Profile</label>
                             </div>
                         </div>
                     </div>
@@ -399,107 +464,474 @@
             </div>
         </div>
 
-        <div class="profile-actions">
-            <button type="submit" class="btn btn-primary">
+        <!-- Action Buttons -->
+        <div class="profile-actions slide-up">
+            <button type="submit" class="btn btn-primary btn-lg animate-btn">
                 <i class="fas fa-save"></i> Save Profile
             </button>
-            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+            <button type="button" class="btn btn-secondary btn-lg animate-btn" onclick="resetForm()">
                 <i class="fas fa-undo"></i> Reset Changes
+            </button>
+            <button type="button" class="btn btn-info btn-lg animate-btn" onclick="exportProfile()">
+                <i class="fas fa-download"></i> Export PDF
             </button>
         </div>
     </form>
-</div><st
-yle>
-    .profile-container {
-        max-width: 1000px;
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
+        --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
+        --shadow-heavy: 0 8px 30px rgba(0,0,0,0.2);
+        --border-radius: 12px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { 
+            opacity: 0; 
+            transform: translateY(30px); 
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200px 0; }
+        100% { background-position: calc(200px + 100%) 0; }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .slide-up {
+        animation: slideUp 0.6s ease-out;
+        animation-fill-mode: both;
+    }
+
+    .slide-up:nth-child(1) { animation-delay: 0.1s; }
+    .slide-up:nth-child(2) { animation-delay: 0.2s; }
+    .slide-up:nth-child(3) { animation-delay: 0.3s; }
+    .slide-up:nth-child(4) { animation-delay: 0.4s; }
+    .slide-up:nth-child(5) { animation-delay: 0.5s; }
+    .slide-up:nth-child(6) { animation-delay: 0.6s; }
+
+    /* Modern Card Design */
+    .modern-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-light);
+        transition: var(--transition);
+        overflow: hidden;
+    }
+
+    .modern-card:hover {
+        box-shadow: var(--shadow-medium);
+        transform: translateY(-2px);
+    }
+
+    .gradient-card {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-medium);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-weight: 600;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Profile Progress */
     .profile-progress {
         margin-bottom: 2rem;
     }
-    
+
     .progress-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
-    
+
     .completion-percentage {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--primary-color);
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #fff, #f8f9fa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
-    
-    .profile-section {
-        margin-bottom: 2rem;
+
+    .animated-progress {
+        height: 12px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.2);
+        overflow: hidden;
     }
-    
+
+    .progress-bar-animated {
+        background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,1), rgba(255,255,255,0.8));
+        background-size: 200px 100%;
+        animation: shimmer 2s infinite linear;
+        border-radius: 6px;
+        transition: width 1s ease-in-out;
+    }
+
+    /* Profile Photo */
     .profile-photo-section {
         text-align: center;
+        margin-bottom: 2rem;
     }
-    
+
+    .profile-photo-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
     .profile-photo {
-        width: 150px;
-        height: 150px;
+        width: 180px;
+        height: 180px;
         border-radius: 50%;
         overflow: hidden;
         margin: 0 auto 1rem;
-        border: 4px solid var(--border-color);
+        border: 6px solid #fff;
+        box-shadow: var(--shadow-medium);
+        position: relative;
+        transition: var(--transition);
     }
-    
+
+    .profile-photo:hover {
+        transform: scale(1.05);
+        box-shadow: var(--shadow-heavy);
+    }
+
     .profile-photo img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transition: var(--transition);
     }
-    
+
     .photo-placeholder {
         width: 100%;
         height: 100%;
-        background-color: var(--gray-light);
+        background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        color: var(--gray-color);
+        font-size: 4rem;
+        color: #6c757d;
     }
-    
-    .education-item, .experience-item, .project-item {
-        padding: 1.5rem;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        background-color: #f8f9fa;
-    }
-    
-    .education-item:last-child, .experience-item:last-child, .project-item:last-child {
-        margin-bottom: 0;
-    }
-    
-    .required {
-        color: var(--danger-color);
-    }
-    
-    .profile-actions {
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 1px solid var(--border-color);
+
+    .photo-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
         display: flex;
-        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: var(--transition);
+        color: white;
+        font-size: 2rem;
     }
-    
-    .card-header {
+
+    .profile-photo:hover .photo-overlay {
+        opacity: 1;
+    }
+
+    /* Floating Labels */
+    .floating-label {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .floating-label input,
+    .floating-label textarea {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem 1rem 0.5rem;
+        font-size: 1rem;
+        transition: var(--transition);
+        background: #fff;
+    }
+
+    .floating-label input:focus,
+    .floating-label textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        outline: none;
+    }
+
+    .floating-label label {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        font-size: 1rem;
+        color: #6c757d;
+        transition: var(--transition);
+        pointer-events: none;
+        background: white;
+        padding: 0 0.25rem;
+    }
+
+    .floating-label input:focus + label,
+    .floating-label input:not(:placeholder-shown) + label,
+    .floating-label textarea:focus + label,
+    .floating-label textarea:not(:placeholder-shown) + label {
+        top: -0.5rem;
+        font-size: 0.875rem;
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    /* Dynamic Items */
+    .dynamic-item {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dynamic-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .dynamic-item:hover::before {
+        left: 100%;
+    }
+
+    .dynamic-item:hover {
+        border-color: #667eea;
+        box-shadow: var(--shadow-medium);
+        transform: translateY(-2px);
+    }
+
+    .item-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
     }
-    
-    .card-header h3 {
+
+    .item-header h5 {
         margin: 0;
+        color: #495057;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
-    
+
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Skills Preview */
+    .skills-preview,
+    .languages-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .skill-tag,
+    .language-tag {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Buttons */
+    .animate-btn {
+        transition: var(--transition);
+        border-radius: 8px;
+        font-weight: 500;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .animate-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.3);
+        border-radius: 50%;
+        transition: width 0.3s, height 0.3s;
+        transform: translate(-50%, -50%);
+    }
+
+    .animate-btn:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .animate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+    }
+
+    .animate-btn:active {
+        transform: translateY(0);
+    }
+
+    /* Custom Checkbox */
+    .custom-checkbox {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .custom-checkbox input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .custom-checkbox label::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.125rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid #dee2e6;
+        border-radius: 4px;
+        background: white;
+        transition: var(--transition);
+    }
+
+    .custom-checkbox input:checked + label::before {
+        background: var(--primary-gradient);
+        border-color: #667eea;
+    }
+
+    .custom-checkbox input:checked + label::after {
+        content: '✓';
+        position: absolute;
+        left: 0.25rem;
+        top: 0;
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Auto-save Indicator */
+    .auto-save-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--success-gradient);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: var(--transition);
+        z-index: 1000;
+    }
+
+    .auto-save-indicator.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Profile Actions */
+    .profile-actions {
+        margin-top: 3rem;
+        padding: 2rem 0;
+        border-top: 2px solid #e9ecef;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Required Field Indicator */
+    .required {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    /* Responsive Design */
     @media (max-width: 768px) {
+        .profile-container {
+            padding: 0 10px;
+        }
+        
         .profile-actions {
             flex-direction: column;
         }
@@ -509,207 +941,659 @@ yle>
             gap: 1rem;
             align-items: flex-start;
         }
+        
+        .profile-photo {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .completion-percentage {
+            font-size: 1.5rem;
+        }
+        
+        .dynamic-item {
+            padding: 1.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .item-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .floating-label input,
+        .floating-label textarea {
+            padding: 0.75rem 0.75rem 0.25rem;
+        }
+        
+        .floating-label label {
+            top: 0.75rem;
+            left: 0.75rem;
+        }
+    }
+
+    /* Loading States */
+    .loading {
+        position: relative;
+        pointer-events: none;
+    }
+
+    .loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 </style>
-
+{% endblock %}{% block extra_js %}
 <script>
+    // Global variables
     let educationIndex = {{ user.personal_data.education|length if user.personal_data.education else 0 }};
     let experienceIndex = {{ user.personal_data.experience|length if user.personal_data.experience else 0 }};
     let projectIndex = {{ user.personal_data.projects|length if user.personal_data.projects else 0 }};
-    
+    let autoSaveTimeout;
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeFloatingLabels();
+        initializeSkillsPreviews();
+        // initializeAutoSave();
+        animateProgressBar();
+        initializeFormValidation();
+    });
+
+    // Floating labels initialization
+    function initializeFloatingLabels() {
+        document.querySelectorAll('.floating-label input, .floating-label textarea').forEach(input => {
+            if (input.value) {
+                input.classList.add('has-value');
+            }
+            
+            input.addEventListener('input', function() {
+                if (this.value) {
+                    this.classList.add('has-value');
+                } else {
+                    this.classList.remove('has-value');
+                }
+            });
+        });
+    }
+
+    // Skills preview functionality
+    function initializeSkillsPreviews() {
+        const skillsInput = document.getElementById('skills');
+        const languagesInput = document.getElementById('languages');
+        
+        if (skillsInput) {
+            updateSkillsPreview(skillsInput.value);
+            skillsInput.addEventListener('input', function() {
+                updateSkillsPreview(this.value);
+            });
+        }
+        
+        if (languagesInput) {
+            updateLanguagesPreview(languagesInput.value);
+            languagesInput.addEventListener('input', function() {
+                updateLanguagesPreview(this.value);
+            });
+        }
+    }
+
+    function updateSkillsPreview(skillsText) {
+        const preview = document.getElementById('skillsPreview');
+        if (!preview) return;
+        
+        preview.innerHTML = '';
+        if (skillsText.trim()) {
+            const skills = skillsText.split(',').map(s => s.trim()).filter(s => s);
+            skills.forEach(skill => {
+                const tag = document.createElement('span');
+                tag.className = 'skill-tag';
+                tag.textContent = skill;
+                preview.appendChild(tag);
+            });
+        }
+    }
+
+    function updateLanguagesPreview(languagesText) {
+        const preview = document.getElementById('languagesPreview');
+        if (!preview) return;
+        
+        preview.innerHTML = '';
+        if (languagesText.trim()) {
+            const languages = languagesText.split(',').map(s => s.trim()).filter(s => s);
+            languages.forEach(language => {
+                const tag = document.createElement('span');
+                tag.className = 'language-tag';
+                tag.textContent = language;
+                preview.appendChild(tag);
+            });
+        }
+    }
+
+    // Progress bar animation
+    function animateProgressBar() {
+        const progressBar = document.querySelector('.progress-bar');
+        if (progressBar) {
+            const percentage = progressBar.getAttribute('data-percentage') || 0;
+            progressBar.style.width = '0%';
+            setTimeout(() => {
+                progressBar.style.width = percentage + '%';
+            }, 500);
+        }
+    }
+
+    // Profile image preview
     function previewImage(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const profileImage = document.getElementById('profileImage');
                 profileImage.innerHTML = `<img src="${e.target.result}" alt="Profile Picture">`;
+                
+                // Add animation
+                const img = profileImage.querySelector('img');
+                img.style.opacity = '0';
+                img.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    img.style.transition = 'all 0.3s ease';
+                    img.style.opacity = '1';
+                    img.style.transform = 'scale(1)';
+                }, 100);
             };
             reader.readAsDataURL(input.files[0]);
         }
     }
-    
+
+    // Education functions
     function addEducation() {
         const container = document.getElementById('education-container');
+        const emptyState = document.getElementById('education-empty');
+        
         const educationHTML = `
-            <div class="education-item">
+            <div class="education-item dynamic-item" style="opacity: 0; transform: translateY(20px);">
+                <div class="item-header">
+                    <h5><i class="fas fa-university"></i> Education Entry</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeEducation(this)">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Institution Name</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="education[${educationIndex}][institution]" class="form-control">
+                            <label>Institution Name</label>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Degree</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="education[${educationIndex}][degree]" class="form-control">
+                            <label>Degree</label>
                         </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Field of Study</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="education[${educationIndex}][field]" class="form-control">
+                            <label>Field of Study</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Graduation Year</label>
+                        <div class="form-group floating-label">
                             <input type="number" name="education[${educationIndex}][year]" class="form-control" min="1950" max="2030">
+                            <label>Graduation Year</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label>GPA/Grade</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="education[${educationIndex}][gpa]" class="form-control" placeholder="e.g., 3.8/4.0 or 85%">
+                            <label>GPA/Grade</label>
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEducation(this)">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
             </div>
         `;
+        
         container.insertAdjacentHTML('beforeend', educationHTML);
+        
+        // Animate the new item
+        const newItem = container.lastElementChild;
+        setTimeout(() => {
+            newItem.style.transition = 'all 0.3s ease';
+            newItem.style.opacity = '1';
+            newItem.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // Hide empty state
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Initialize floating labels for new inputs
+        initializeFloatingLabels();
         educationIndex++;
     }
-    
+
     function removeEducation(button) {
-        button.closest('.education-item').remove();
+        const item = button.closest('.education-item');
+        const container = document.getElementById('education-container');
+        const emptyState = document.getElementById('education-empty');
+        
+        // Animate removal
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-100%)';
+        
+        setTimeout(() => {
+            item.remove();
+            
+            // Show empty state if no items left
+            if (container.children.length === 0 && emptyState) {
+                emptyState.style.display = 'block';
+            }
+        }, 300);
     }
-    
+
+    // Experience functions
     function addExperience() {
         const container = document.getElementById('experience-container');
+        const emptyState = document.getElementById('experience-empty');
+        
         const experienceHTML = `
-            <div class="experience-item">
+            <div class="experience-item dynamic-item" style="opacity: 0; transform: translateY(20px);">
+                <div class="item-header">
+                    <h5><i class="fas fa-building"></i> Work Experience</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeExperience(this)">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Job Title</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="experience[${experienceIndex}][title]" class="form-control">
+                            <label>Job Title</label>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Company</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="experience[${experienceIndex}][company]" class="form-control">
+                            <label>Company</label>
                         </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Start Date</label>
+                        <div class="form-group floating-label">
                             <input type="month" name="experience[${experienceIndex}][start_date]" class="form-control">
+                            <label>Start Date</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
+                        <div class="form-group floating-label">
+                            <input type="month" name="experience[${experienceIndex}][end_date]" class="form-control" id="end_date_${experienceIndex}">
                             <label>End Date</label>
-                            <input type="month" name="experience[${experienceIndex}][end_date]" class="form-control">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label>&nbsp;</label>
-                            <div class="form-check">
-                                <input type="checkbox" name="experience[${experienceIndex}][current]" class="form-check-input">
-                                <label class="form-check-label">Currently working here</label>
+                            <div class="form-check custom-checkbox">
+                                <input type="checkbox" name="experience[${experienceIndex}][current]" class="form-check-input" id="current_${experienceIndex}" onchange="toggleEndDate(${experienceIndex})">
+                                <label class="form-check-label" for="current_${experienceIndex}">Currently working here</label>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group floating-label">
+                    <textarea name="experience[${experienceIndex}][description]" class="form-control" rows="3" placeholder="Describe your responsibilities and achievements..."></textarea>
                     <label>Description</label>
-                    <textarea name="experience[${experienceIndex}][description]" class="form-control" rows="3" 
-                              placeholder="Describe your responsibilities and achievements..."></textarea>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExperience(this)">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
             </div>
         `;
+        
         container.insertAdjacentHTML('beforeend', experienceHTML);
+        
+        // Animate the new item
+        const newItem = container.lastElementChild;
+        setTimeout(() => {
+            newItem.style.transition = 'all 0.3s ease';
+            newItem.style.opacity = '1';
+            newItem.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // Hide empty state
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Initialize floating labels for new inputs
+        initializeFloatingLabels();
         experienceIndex++;
     }
-    
+
     function removeExperience(button) {
-        button.closest('.experience-item').remove();
+        const item = button.closest('.experience-item');
+        const container = document.getElementById('experience-container');
+        const emptyState = document.getElementById('experience-empty');
+        
+        // Animate removal
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-100%)';
+        
+        setTimeout(() => {
+            item.remove();
+            
+            // Show empty state if no items left
+            if (container.children.length === 0 && emptyState) {
+                emptyState.style.display = 'block';
+            }
+        }, 300);
     }
-    
+
+    function toggleEndDate(index) {
+        const checkbox = document.getElementById(`current_${index}`);
+        const endDateInput = document.getElementById(`end_date_${index}`);
+        
+        if (checkbox && endDateInput) {
+            if (checkbox.checked) {
+                endDateInput.disabled = true;
+                endDateInput.value = '';
+                endDateInput.style.opacity = '0.5';
+            } else {
+                endDateInput.disabled = false;
+                endDateInput.style.opacity = '1';
+            }
+        }
+    }
+
+    // Project functions
     function addProject() {
         const container = document.getElementById('projects-container');
+        const emptyState = document.getElementById('projects-empty');
+        
         const projectHTML = `
-            <div class="project-item">
+            <div class="project-item dynamic-item" style="opacity: 0; transform: translateY(20px);">
+                <div class="item-header">
+                    <h5><i class="fas fa-code"></i> Project</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger animate-btn" onclick="removeProject(this)">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
                 <div class="row">
                     <div class="col-md-8">
-                        <div class="form-group">
-                            <label>Project Name</label>
+                        <div class="form-group floating-label">
                             <input type="text" name="projects[${projectIndex}][name]" class="form-control">
+                            <label>Project Name</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Project URL</label>
+                        <div class="form-group floating-label">
                             <input type="url" name="projects[${projectIndex}][url]" class="form-control" placeholder="https://...">
+                            <label>Project URL</label>
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group floating-label">
+                    <textarea name="projects[${projectIndex}][description]" class="form-control" rows="3" placeholder="Describe the project, technologies used, and your role..."></textarea>
                     <label>Description</label>
-                    <textarea name="projects[${projectIndex}][description]" class="form-control" rows="3" 
-                              placeholder="Describe the project, technologies used, and your role..."></textarea>
                 </div>
-                <div class="form-group">
+                <div class="form-group floating-label">
+                    <input type="text" name="projects[${projectIndex}][technologies]" class="form-control" placeholder="e.g., React, Node.js, MongoDB">
                     <label>Technologies Used</label>
-                    <input type="text" name="projects[${projectIndex}][technologies]" class="form-control" 
-                           placeholder="e.g., React, Node.js, MongoDB">
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProject(this)">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
             </div>
         `;
+        
         container.insertAdjacentHTML('beforeend', projectHTML);
+        
+        // Animate the new item
+        const newItem = container.lastElementChild;
+        setTimeout(() => {
+            newItem.style.transition = 'all 0.3s ease';
+            newItem.style.opacity = '1';
+            newItem.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // Hide empty state
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Initialize floating labels for new inputs
+        initializeFloatingLabels();
         projectIndex++;
     }
-    
+
     function removeProject(button) {
-        button.closest('.project-item').remove();
+        const item = button.closest('.project-item');
+        const container = document.getElementById('projects-container');
+        const emptyState = document.getElementById('projects-empty');
+        
+        // Animate removal
+        item.style.transition = 'all 0.3s ease';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-100%)';
+        
+        setTimeout(() => {
+            item.remove();
+            
+            // Show empty state if no items left
+            if (container.children.length === 0 && emptyState) {
+                emptyState.style.display = 'block';
+            }
+        }, 300);
     }
-    
+
+    // Form actions
     function saveProfile() {
-        document.getElementById('profileForm').submit();
+        const form = document.getElementById('profileForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        // Add loading state
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+        
+        form.submit();
     }
-    
+
     function previewProfile() {
         window.open('/student/profile/preview', '_blank');
     }
-    
+
     function resetForm() {
         if (confirm('Are you sure you want to reset all changes? This will discard any unsaved modifications.')) {
-            document.getElementById('profileForm').reset();
+            const form = document.getElementById('profileForm');
+            form.reset();
+            
+            // Reset floating labels
+            document.querySelectorAll('.floating-label input, .floating-label textarea').forEach(input => {
+                input.classList.remove('has-value');
+            });
+            
+            // Reset previews
+            updateSkillsPreview('');
+            updateLanguagesPreview('');
+            
+            // Show success message
+            showNotification('Form reset successfully', 'info');
         }
     }
-    
+
+    function exportProfile() {
+        showNotification('Generating PDF...', 'info');
+        
+        // Simulate PDF generation
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = '/student/profile/export-pdf';
+            link.download = 'profile.pdf';
+            link.click();
+            
+            showNotification('PDF exported successfully', 'success');
+        }, 2000);
+    }
+
     // Auto-save functionality
-    let autoSaveTimeout;
+    function initializeAutoSave() {
+        document.querySelectorAll('input, textarea, select').forEach(element => {
+            element.addEventListener('input', autoSave);
+            element.addEventListener('change', autoSave);
+        });
+    }
+
     function autoSave() {
         clearTimeout(autoSaveTimeout);
         autoSaveTimeout = setTimeout(() => {
             const formData = new FormData(document.getElementById('profileForm'));
+            
             fetch('/student/profile/autosave', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAutoSaveIndicator();
+                }
+            })
+            .catch(error => {
+                console.error('Auto-save failed:', error);
             });
-        }, 5000); // Auto-save after 5 seconds of inactivity
+        }, 3000); // Auto-save after 3 seconds of inactivity
     }
-    
-    // Add event listeners for auto-save
-    document.querySelectorAll('input, textarea, select').forEach(element => {
-        element.addEventListener('input', autoSave);
-        element.addEventListener('change', autoSave);
+
+    function showAutoSaveIndicator() {
+        const indicator = document.getElementById('autoSaveIndicator');
+        indicator.classList.add('show');
+        
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+
+    // Form validation
+    function initializeFormValidation() {
+        const form = document.getElementById('profileForm');
+        
+        form.addEventListener('submit', function(e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                showNotification('Please fill in all required fields', 'error');
+            }
+        });
+    }
+
+    function validateForm() {
+        const requiredFields = document.querySelectorAll('input[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.style.borderColor = '#dc3545';
+                isValid = false;
+            } else {
+                field.style.borderColor = '#e9ecef';
+            }
+        });
+        
+        return isValid;
+    }
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
+
+    // Initialize existing checkboxes for current work
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('input[name*="[current]"]').forEach(checkbox => {
+            const match = checkbox.name.match(/experience\[(\d+)\]\[current\]/);
+            if (match) {
+                const index = match[1];
+                toggleEndDate(index);
+            }
+        });
     });
 </script>
+
+<style>
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 1001;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 250px;
+    }
+
+    .notification.show {
+        transform: translateX(0);
+    }
+
+    .notification-success {
+        background: var(--success-gradient);
+    }
+
+    .notification-error {
+        background: var(--danger-gradient);
+    }
+
+    .notification-info {
+        background: var(--primary-gradient);
+    }
+
+    /* Enhanced floating label styles */
+    .floating-label input.has-value + label,
+    .floating-label textarea.has-value + label {
+        top: -0.5rem;
+        font-size: 0.875rem;
+        color: #667eea;
+        font-weight: 500;
+    }
+</style>
 {% endblock %}

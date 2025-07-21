@@ -1,0 +1,93 @@
+{% extends "student/base.html" %}
+
+{% block student_title %}Account Settings{% endblock %}
+
+{% block page_title %}Account Settings{% endblock %}
+
+{% block student_content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Account Settings</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('student.settings') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" readonly>
+                <small class="form-text text-muted">Contact support to change your email address.</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="current_password">Current Password</label>
+                <input type="password" class="form-control" id="current_password" name="current_password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="new_password">New Password</label>
+                <input type="password" class="form-control" id="new_password" name="new_password">
+                <small class="form-text text-muted">Leave blank if you don't want to change your password.</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+            </div>
+            
+            <hr>
+            
+            <h5 class="mb-3">Notification Preferences</h5>
+            
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="email_notifications" name="email_notifications" {% if user.preferences.email_notifications|default(true) %}checked{% endif %}>
+                    <label class="custom-control-label" for="email_notifications">Email Notifications</label>
+                </div>
+                <small class="form-text text-muted">Receive notifications about application updates, interviews, and job offers.</small>
+            </div>
+            
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="job_alerts" name="job_alerts" {% if user.preferences.job_alerts|default(true) %}checked{% endif %}>
+                    <label class="custom-control-label" for="job_alerts">Job Alerts</label>
+                </div>
+                <small class="form-text text-muted">Receive alerts about new job postings that match your profile.</small>
+            </div>
+            
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="campus_drive_alerts" name="campus_drive_alerts" {% if user.preferences.campus_drive_alerts|default(true) %}checked{% endif %}>
+                    <label class="custom-control-label" for="campus_drive_alerts">Campus Drive Alerts</label>
+                </div>
+                <small class="form-text text-muted">Receive alerts about upcoming campus recruitment drives.</small>
+            </div>
+            
+            <hr>
+            
+            <h5 class="mb-3">Privacy Settings</h5>
+            
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="profile_visibility" name="profile_visibility" {% if user.preferences.profile_visibility|default(true) %}checked{% endif %}>
+                    <label class="custom-control-label" for="profile_visibility">Profile Visibility</label>
+                </div>
+                <small class="form-text text-muted">Allow employers to view your profile and contact you directly.</small>
+            </div>
+            
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="resume_visibility" name="resume_visibility" {% if user.preferences.resume_visibility|default(true) %}checked{% endif %}>
+                    <label class="custom-control-label" for="resume_visibility">Resume Visibility</label>
+                </div>
+                <small class="form-text text-muted">Allow employers to view your resume.</small>
+            </div>
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary ml-2">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock student_content %}

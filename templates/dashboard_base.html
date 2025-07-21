@@ -1,0 +1,9 @@
+{% extends "common/base.html" %}
+
+{# This is a compatibility template to ensure all templates that extend dashboard_base.html continue to work #}
+
+{% block dashboard_content %}
+    {% block content %}
+    <!-- Content will be inserted by child templates -->
+    {% endblock content %}
+{% endblock dashboard_content %}

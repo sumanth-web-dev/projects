@@ -185,6 +185,9 @@ def create_app(config_name='Config'):
     from api.job_routes import job_bp
     from api.campus_drive_routes import campus_drive_bp
     
+    # Import API endpoints
+    from api.user_role import get_current_user_role
+    
     # Register blueprints
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -244,8 +247,11 @@ def create_app(config_name='Config'):
         
     # Add context processor for template variables
     @app.context_processor
-    def inject_now():
-        return {'now': datetime.now()}
+    def inject_template_vars():
+        return {
+            'now': datetime.now(),
+            'csrf_token': lambda: session.get('csrf_token', '')
+        }
     
 
 
@@ -269,4 +275,4 @@ if __name__ == '__main__':
     
     # Run the application on localhost:5000
     print("Starting application on http://localhost:5000/")
-    app.run(debug=True, host='localhost', port=5000)
+    app.run(debug=True, host='localhost', port=5000,use_reloader=False)
